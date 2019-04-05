@@ -129,9 +129,18 @@
   <ItemGroup>
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\Main.cpp" />
+    <ClCompile Include="Src\Scenes\GameOverScene.cpp" />
+    <ClCompile Include="Src\Scenes\MainGameScene.cpp" />
+    <ClCompile Include="Src\Scenes\StatusScene.cpp" />
+    <ClCompile Include="Src\Scenes\TitleScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\GLFWEW.h" />
+    <ClInclude Include="Src\Scene.h" />
+    <ClInclude Include="Src\Scenes\GameOverScene.h" />
+    <ClInclude Include="Src\Scenes\MainGameScene.h" />
+    <ClInclude Include="Src\Scenes\StatusScene.h" />
+    <ClInclude Include="Src\Scenes\TitleScene.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
