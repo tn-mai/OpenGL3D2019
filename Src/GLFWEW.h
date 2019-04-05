@@ -6,6 +6,7 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <array>
 
 namespace GLFWEW {
 
@@ -25,6 +26,7 @@ public:
   void ResetDeltaTime();
   double DeltaTime() const { return deltaTime; }
   bool KeyDown(int key) const;
+  bool KeyPressed(int key) const;
 
 private:
   Window() = default;
@@ -39,6 +41,13 @@ private:
   int height = 0;
   double prevTime = 0;
   double deltaTime = 0;
+
+  enum class KeyState : char {
+    release,
+    startPress,
+    press,
+  };
+  std::array<KeyState, GLFW_KEY_LAST + 1> keyState = { KeyState::release };
 };
 
 } // namespace GLFWEW

@@ -84,6 +84,10 @@ bool Window::Init(int w, int h, const char* title)
     return false;
   }
 
+  for (auto& e : keyState) {
+    e = KeyState::release;
+  }
+
   width = w;
   height = h;
   glDebugMessageCallback(OutputGLDebugMessage, nullptr);
@@ -116,6 +120,20 @@ bool Window::Init(int w, int h, const char* title)
 */
 void Window::Update()
 {
+  // キー状態の更新.
+  for (size_t i = 0; i < keyState.size(); ++i) {
+    const bool pressed = glfwGetKey(window, i) == GLFW_PRESS;
+    if (pressed) {
+      if (keyState[i] == KeyState::release) {
+        keyState[i] = KeyState::startPress;
+      } else if (keyState[i] == KeyState::startPress) {
+        keyState[i] = KeyState::press;
+      }
+    } else if (keyState[i] != KeyState::release) {
+      keyState[i] = KeyState::release;
+    }
+  }
+
   const double t = glfwGetTime();
   deltaTime = t - prevTime;
   if (deltaTime >= 0.5) {
@@ -134,11 +152,35 @@ void Window::ResetDeltaTime()
 }
 
 /**
+* キーが押された瞬間か調べる.
 *
+* @param key 調べるキーのID(GLFW_KEY_Aなど).
+*
+* @retval true  キーが押された瞬間.
+* @retval false キーが押された瞬間ではない.
 */
 bool Window::KeyDown(int key) const
 {
-  return glfwGetKey(window, key) == GLFW_PRESS;
+  if (key < 0 || key >= static_cast<int>(keyState.size())) {
+    return false;
+  }
+  return keyState[key] == KeyState::startPress;
+}
+
+/**
+* キーが押されているか調べる.
+*
+* @param key 調べるキーのID(GLFW_KEY_Aなど).
+*
+* @retval true  キーが押されている.
+* @retval false キーが押されていない.
+*/
+bool Window::KeyPressed(int key) const
+{
+  if (key < 0 || key >= static_cast<int>(keyState.size())) {
+    return false;
+  }
+  return keyState[key] != KeyState::release;
 }
 
 /**
