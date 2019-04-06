@@ -18,6 +18,7 @@ int main()
 
   SceneStack sceneStack;
   sceneStack.Push(std::make_shared<TitleScene>());
+  sceneStack.Current().Initialize();
 
   while (!window.ShouldClose()) {
     window.Update();

@@ -127,23 +127,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Src\BufferObject.cpp" />
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\Scenes\GameOverScene.cpp" />
     <ClCompile Include="Src\Scenes\MainGameScene.cpp" />
     <ClCompile Include="Src\Scenes\StatusScene.cpp" />
     <ClCompile Include="Src\Scenes\TitleScene.cpp" />
+    <ClCompile Include="Src\Shader.cpp" />
+    <ClCompile Include="Src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\BufferObject.h" />
+    <ClInclude Include="Src\d3dx12.h" />
+    <ClInclude Include="Src\Geometry.h" />
     <ClInclude Include="Src\GLFWEW.h" />
     <ClInclude Include="Src\Scene.h" />
     <ClInclude Include="Src\Scenes\GameOverScene.h" />
     <ClInclude Include="Src\Scenes\MainGameScene.h" />
     <ClInclude Include="Src\Scenes\StatusScene.h" />
     <ClInclude Include="Src\Scenes\TitleScene.h" />
+    <ClInclude Include="Src\Shader.h" />
+    <ClInclude Include="Src\Texture.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Res\Sprite.frag" />
+    <None Include="Res\Sprite.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
