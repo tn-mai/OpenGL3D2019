@@ -4,6 +4,7 @@
 #ifndef TEXTURE_H_INCLUDED
 #define TEXTURE_H_INCLUDED
 #include <GL/glew.h>
+#include <memory>
 
 namespace Texture {
 
@@ -33,6 +34,7 @@ private:
   GLint height = 0;
   bool isCubemap = false;
 };
+using Image2DPtr = std::shared_ptr<Image2D>;
 
 } // namespace Texture
 
