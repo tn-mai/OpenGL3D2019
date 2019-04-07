@@ -45,6 +45,9 @@
     <ClCompile Include="Src\Shader.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Sprite.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\GLFWEW.h">
@@ -78,6 +81,9 @@
       <Filter>ソース ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Src\Geometry.h">
+      <Filter>ソース ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Sprite.h">
       <Filter>ソース ファイル</Filter>
     </ClInclude>
   </ItemGroup>
