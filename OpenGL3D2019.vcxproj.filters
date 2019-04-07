@@ -1,99 +1,95 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="ソース ファイル">
+    <Filter Include="Src">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="ヘッダー ファイル">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="Src\Scene">
+      <UniqueIdentifier>{5e221679-21e2-4309-b633-8ca226e77ffc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="リソース ファイル">
+    <Filter Include="Res">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="ソース ファイル\Scene">
-      <UniqueIdentifier>{5e221679-21e2-4309-b633-8ca226e77ffc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Main.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\GLFWEW.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\Scenes\GameOverScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Src\Scenes\MainGameScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Src\Scenes\StatusScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Src\Scenes\TitleScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Src\Texture.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\BufferObject.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\Shader.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\Sprite.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Src\GLFWEW.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Scene.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\Scenes\GameOverScene.h">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Src\Scenes\MainGameScene.h">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Src\Scenes\StatusScene.h">
-      <Filter>ソース ファイル\Scene</Filter>
+      <Filter>Src\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Src\Scenes\TitleScene.h">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Texture.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Src\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Src\BufferObject.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\d3dx12.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\Shader.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\Geometry.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
     </ClInclude>
     <ClInclude Include="Src\Sprite.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\GLFWEW.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Texture.h">
+      <Filter>Src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Res\Sprite.frag">
-      <Filter>リソース ファイル</Filter>
+      <Filter>Res</Filter>
     </None>
     <None Include="Res\Sprite.vert">
-      <Filter>リソース ファイル</Filter>
+      <Filter>Res</Filter>
     </None>
   </ItemGroup>
 </Project>
