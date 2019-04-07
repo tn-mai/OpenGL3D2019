@@ -20,6 +20,8 @@ public:
   explicit Image2D(const char*);
   ~Image2D();
   bool IsNull() const;
+  GLint Width() const { return width; }
+  GLint Height() const { return height; }
   GLuint Id() const { return id; }
   GLenum Target() const;
   void Bind(int no) const;

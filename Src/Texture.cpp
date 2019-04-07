@@ -517,8 +517,8 @@ Image2D::Image2D(const char* path)
   if (id) {
     const GLenum target = Target();
     glBindTexture(target, id);
-    glGetTexParameteriv(target, GL_TEXTURE_WIDTH, &width);
-    glGetTexParameteriv(target, GL_TEXTURE_HEIGHT, &height);
+    glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(target, 0, GL_TEXTURE_HEIGHT, &height);
     glBindTexture(target, 0);
   }
 }
