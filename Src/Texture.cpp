@@ -314,18 +314,18 @@ GLuint LoadDDS(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t f
 * @return 作成に成功した場合はテクスチャポインタを返す.
 *         失敗した場合はnullptr返す.
 */
-GLuint LoadBMP(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t fileSize)
+bool LoadBMP(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t fileSize, ImageData& imageData)
 {
   const size_t bmpFileHeaderSize = 14; // ビットマップファイルヘッダのバイト数
   const size_t windowsV1HeaderSize = 40; // ビットマップ情報ヘッダのバイト数.
   if (fileSize < bmpFileHeaderSize + windowsV1HeaderSize) {
-    return 0; // BMPファイルではない.
+    return false; // BMPファイルではない.
   }
   uint8_t bmpHeader[bmpFileHeaderSize + windowsV1HeaderSize];
   ifs.read(bmpHeader, sizeof(bmpHeader));
 
   if (bmpHeader[0] != 'B' || bmpHeader[1] != 'M') {
-    return 0; // BMPファイルではない.
+    return false; // BMPファイルではない.
   }
   const size_t offsetBytes = Get(bmpHeader, 10, 4);
   const uint32_t infoSize = Get(bmpHeader, 14, 4);
@@ -334,16 +334,27 @@ GLuint LoadBMP(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t f
   const uint32_t bitCount = Get(bmpHeader, 28, 2);
   const uint32_t compression = Get(bmpHeader, 30, 4);
   const size_t pixelBytes = bitCount / 8;
-  if (infoSize != windowsV1HeaderSize || bitCount != 24 || compression) {
+  if (infoSize != windowsV1HeaderSize || compression) {
     std::cerr << "WARNING: " << filename << "は未対応のBMPファイルです.\n";
-    return 0; // 未対応のBMPファイル.
+    return false; // 未対応のBMPファイル.
   }
 
   const size_t imageSize = width * height * pixelBytes;
-  std::vector<uint8_t> buf;
-  buf.resize(imageSize);
-  ifs.read(buf.data(), buf.size());
-  return CreateImage2D(width, height, buf.data(), GL_RGB8, GL_BGR);
+  imageData.data.resize(imageSize);
+  ifs.read(imageData.data.data(), imageSize);
+
+  GLenum type = GL_UNSIGNED_BYTE;
+  GLenum format = GL_BGR;
+  if (bitCount == 8) {
+    format = GL_RED;
+  } else if (bitCount == 16) {
+    type = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+  }
+  imageData.width = width;
+  imageData.height = height;
+  imageData.format = format;
+  imageData.type = type;
+  return true;
 }
 
 /**
@@ -354,7 +365,7 @@ GLuint LoadBMP(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t f
 * @return 作成に成功した場合はテクスチャポインタを返す.
 *         失敗した場合はnullptr返す.
 */
-GLuint LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileSize)
+bool LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileSize, ImageData& imageData)
 {
   // TGAヘッダを読み込む.
   uint8_t tgaHeader[18];
@@ -375,32 +386,32 @@ GLuint LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileS
   const int width = tgaHeader[12] | (tgaHeader[13] << 8);
   const int height = tgaHeader[14] | (tgaHeader[15] << 8);
   if (width <= 0 || height <= 0) {
-    return 0; // 未対応のTGAファイル、またはTGAふぁいるではない.
+    return false; // 未対応のTGAファイル、またはTGAふぁいるではない.
   }
   const int pixelDepth = tgaHeader[16];
   if (pixelDepth != 16 && pixelDepth != 24 && pixelDepth != 32) {
-    return 0; // 未対応のTGAファイル、またはTGAふぁいるではない.
+    return false; // 未対応のTGAファイル、またはTGAふぁいるではない.
   }
   const int imageSize = width * height * pixelDepth / 8;
   if (fileSize < imageSize + sizeof(tgaHeader)) {
-    return 0; // 未対応のTGAファイル、またはTGAふぁいるではない.
+    return false; // 未対応のTGAファイル、またはTGAふぁいるではない.
   }
-  std::vector<uint8_t> buf(imageSize);
-  ifs.read(buf.data(), imageSize);
+  imageData.data.resize(imageSize);
+  ifs.read(imageData.data.data(), imageSize);
 
   // 画像データが「上から下」で格納されている場合、上下を入れ替える.
   if (tgaHeader[17] & 0x20) {
     std::cout << "反転中…";
     const int lineSize = width * pixelDepth / 8;
     std::vector<uint8_t> tmp(imageSize);
-    std::vector<uint8_t>::iterator source = buf.begin();
+    std::vector<uint8_t>::iterator source = imageData.data.begin();
     std::vector<uint8_t>::iterator destination = tmp.end();
     for (int i = 0; i < height; ++i) {
       destination -= lineSize;
       std::copy(source, source + lineSize, destination);
       source += lineSize;
     }
-    buf.swap(tmp);
+    imageData.data.swap(tmp);
   }
 
   // 読み込んだ画像データからテクスチャを作成する.
@@ -414,22 +425,25 @@ GLuint LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileS
   } else if (tgaHeader[16] == 16) {
     type = GL_UNSIGNED_SHORT_1_5_5_5_REV;
   }
-  return CreateImage2D(width, height, buf.data(), format, type);
+  imageData.width = width;
+  imageData.height = height;
+  imageData.type = type;
+  imageData.format = format;
+  return true;
 }
 
 /**
-* ファイルから2Dテクスチャを読み込む.
+* ファイルから画像データを読み込む.
 *
-* @param path 2Dテクスチャとして読み込むファイルのパス.
+* @param path      画像として読み込むファイルのパス.
+* @param imageData 画像データを格納する構造体.
 *
-* @retval 0以外  作成したテクスチャ・オブジェクトのID.
-* @retval 0      テクスチャの作成に失敗.
+* @retval true  読み込み成功.
+* @retval false 読み込み失敗.
 */
-GLuint LoadImage2D(const char* path)
+bool LoadImage2D(const char* path, ImageData& imageData)
 {
-  // TGAヘッダを読み込む.
   std::basic_ifstream<uint8_t> ifs;
-
   ifs.open(path, std::ios_base::binary);
   if (!ifs) {
     std::cerr << "WARNING: " << path << "を開けません.\n";
@@ -443,23 +457,63 @@ GLuint LoadImage2D(const char* path)
 
   std::cout << "INFO: " << path << "を読み込み中…";
 
-  GLuint texId = 0;
   ifs.seekg(0, std::ios_base::beg);
-  texId = LoadBMP(path, ifs, size);
-  if (!texId) {
-    ifs.seekg(0, std::ios_base::beg);
-    texId = LoadTGA(path, ifs, size);
-    if (!texId) {
-      ifs.seekg(0, std::ios_base::beg);
-      texId = LoadDDS(path, ifs, size);
-      if (!texId) {
-        std::cout << "失敗\n";
-        return 0;
-      }
-    }
+  if (LoadBMP(path, ifs, size, imageData)) {
+    std::cout << "完了\n";
+    return true;
   }
-  std::cout << "完了\n";
-  return texId;
+  ifs.seekg(0, std::ios_base::beg);
+  if (LoadTGA(path, ifs, size, imageData)) {
+    std::cout << "完了\n";
+    return true;
+  }
+  std::cout << "失敗\n";
+  return false;
+}
+
+/**
+* ファイルから2Dテクスチャを読み込む.
+*
+* @param path 2Dテクスチャとして読み込むファイルのパス.
+*
+* @retval 0以外  作成したテクスチャ・オブジェクトのID.
+* @retval 0      テクスチャの作成に失敗.
+*/
+GLuint LoadImage2D(const char* path)
+{
+  std::basic_ifstream<uint8_t> ifs;
+  ifs.open(path, std::ios_base::binary);
+  if (!ifs) {
+    std::cerr << "WARNING: " << path << "を開けません.\n";
+    return 0;
+  }
+  std::vector<uint8_t> tmp(1024 * 1024);
+  ifs.rdbuf()->pubsetbuf(tmp.data(), tmp.size());
+
+  ifs.seekg(0, std::ios_base::end);
+  const size_t size = static_cast<size_t>(ifs.tellg());
+
+  std::cout << "INFO: " << path << "を読み込み中…";
+
+  ImageData imageData;
+  ifs.seekg(0, std::ios_base::beg);
+  if (LoadBMP(path, ifs, size, imageData)) {
+    std::cout << "完了\n";
+    return CreateImage2D(imageData.width, imageData.height, imageData.data.data(), imageData.format, imageData.type);
+  }
+  ifs.seekg(0, std::ios_base::beg);
+  if (LoadTGA(path, ifs, size, imageData)) {
+    std::cout << "完了\n";
+    return CreateImage2D(imageData.width, imageData.height, imageData.data.data(), imageData.format, imageData.type);
+  }
+  ifs.seekg(0, std::ios_base::beg);
+  const GLuint texId = LoadDDS(path, ifs, size);
+  if (texId) {
+    std::cout << "完了\n";
+    return texId;
+  }
+  std::cout << "失敗\n";
+  return 0;
 }
 
 /**
@@ -480,7 +534,13 @@ GLuint CreateImage2D(GLsizei width, GLsizei height, const GLvoid* data, GLenum f
   glGenTextures(1, &id);
   glBindTexture(GL_TEXTURE_2D, id);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, format, type, data);
+  GLenum internalFormat = GL_RGBA8;
+  if (format == GL_BGR) {
+    internalFormat = GL_RGB8;
+  } else if (format == GL_RED) {
+    internalFormat = GL_R8;
+  }
+  glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
   const GLenum result = glGetError();
   if (result != GL_NO_ERROR) {

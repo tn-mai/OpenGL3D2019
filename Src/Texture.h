@@ -5,11 +5,21 @@
 #define TEXTURE_H_INCLUDED
 #include <GL/glew.h>
 #include <memory>
+#include <vector>
 
 namespace Texture {
 
+struct ImageData {
+  GLint width;
+  GLint height;
+  GLenum format;
+  GLenum type;
+  std::vector<uint8_t> data;
+};
+
 GLuint CreateImage2D(GLsizei width, GLsizei height, const GLvoid* data, GLenum format, GLenum type);
 GLuint LoadImage2D(const char* path);
+bool LoadImage2D(const char* path, ImageData& imageData);
 
 /**
 * テクスチャ・イメージ.
