@@ -20,7 +20,9 @@ TitleScene::TitleScene() : Scene("TitleScene")
 */
 bool TitleScene::Initialize()
 {
-  spriteRenderer.Init(1000);
+  spriteRenderer.Init(1000, "Res/Sprite.vert", "Res/Sprite.frag");
+  fontRenderer.Init(1000);
+  fontRenderer.LoadFromFile("Res/font.fnt");
   Sprite spr(std::make_shared<Texture::Image2D>("Res/Title.tga"));
   sprites.push_back(spr);
   return true;
@@ -43,6 +45,9 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
     spriteRenderer.AddVertices(e);
   }
   spriteRenderer.EndUpdate();
+  fontRenderer.BeginUpdate();
+  fontRenderer.AddString(glm::vec2(0, 0), L"ƒ^ƒCƒgƒ‹‰æ–Ê");
+  fontRenderer.EndUpdate();
 }
 
 /**
@@ -51,7 +56,9 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
 void TitleScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
-  spriteRenderer.Draw({ window.Width(), window.Height() });
+  const glm::vec2 screenSize(window.Width(), window.Height());
+  spriteRenderer.Draw(screenSize);
+  fontRenderer.Draw(screenSize);
 }
 
 /**

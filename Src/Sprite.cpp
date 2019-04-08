@@ -45,7 +45,7 @@ void Sprite::Texture(const Texture::Image2DPtr& tex)
 * @retval true  初期化成功.
 * @retval false 初期化失敗.
 */
-bool SpriteRenderer::Init(size_t maxSpriteCount)
+bool SpriteRenderer::Init(size_t maxSpriteCount, const char* vsPath, const char* fsPath)
 {
   vbo.Create(GL_ARRAY_BUFFER, sizeof(Vertex) * maxSpriteCount * 4, nullptr, GL_STREAM_DRAW);
   std::vector<GLushort> indices;
@@ -65,7 +65,7 @@ bool SpriteRenderer::Init(size_t maxSpriteCount)
   vao.VertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, color));
   vao.VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, texCoord));
   vao.Unbind();
-  program = Shader::Cache::Instance().Create("Res/Sprite.vert", "Res/Sprite.frag");
+  program = Shader::Cache::Instance().Create(vsPath, fsPath);
 
   vboUsed = 0;
   pVBO = nullptr;
@@ -110,7 +110,10 @@ bool SpriteRenderer::AddVertices(const Sprite& sprite)
   rect.origin *= reciprocalSize;
   rect.size *= reciprocalSize;
   const glm::vec2 halfSize = sprite.Rectangle().size * 0.5f;
-  const glm::mat4x4 transform = glm::translate(glm::mat4(1), sprite.Position());
+  const glm::mat4 matT = glm::translate(glm::mat4(1), sprite.Position());
+  const glm::mat4 matR = glm::rotate(glm::mat4(1), sprite.Rotation(), glm::vec3(0, 0, 1));
+  const glm::mat4 matS = glm::scale(glm::mat4(1), glm::vec3(sprite.Scale(), 1));
+  const glm::mat4 transform = matT * matR * matS;
 
   pVBO[0].position = transform * glm::vec4(-halfSize.x, -halfSize.y, 0, 1);
   pVBO[0].color = sprite.Color();
@@ -170,8 +173,10 @@ void SpriteRenderer::Draw(const glm::vec2& screenSize) const
   vao.Bind();
   program->Use();
 
-  const glm::mat4x4 matProj = glm::perspective(glm::radians(45.0f), screenSize.x / screenSize.y, 200.0f, 1200.0f);
-  const glm::mat4x4 matView = glm::lookAt(glm::vec3(0, 0, glm::tan(glm::radians(90.0f - 22.5f)) * screenSize.y * 0.5f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+  // 平行投影、原点は画面の中心.
+  const glm::vec2 halfScreenSize = screenSize * 0.5f;
+  const glm::mat4x4 matProj = glm::ortho(-halfScreenSize.x, halfScreenSize.x, -halfScreenSize.y, halfScreenSize.y, 1.0f, 1000.0f);
+  const glm::mat4x4 matView = glm::lookAt(glm::vec3(0, 0, 100), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
   program->SetViewProjectionMatrix(matProj * matView);
 
   for (const auto& data : drawDataList) {

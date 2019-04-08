@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Src\BufferObject.cpp" />
+    <ClCompile Include="Src\Font.cpp" />
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\Scenes\GameOverScene.cpp" />
@@ -141,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="Src\BufferObject.h" />
     <ClInclude Include="Src\d3dx12.h" />
+    <ClInclude Include="Src\Font.h" />
     <ClInclude Include="Src\Geometry.h" />
     <ClInclude Include="Src\GLFWEW.h" />
     <ClInclude Include="Src\Scene.h" />
@@ -154,6 +156,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Res\Font.frag" />
+    <None Include="Res\Font.vert" />
     <None Include="Res\Sprite.frag" />
     <None Include="Res\Sprite.vert" />
   </ItemGroup>

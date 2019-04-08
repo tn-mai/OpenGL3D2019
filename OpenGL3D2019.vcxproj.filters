@@ -44,6 +44,9 @@
     <ClCompile Include="Src\Sprite.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Font.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Scene.h">
@@ -82,6 +85,9 @@
     <ClInclude Include="Src\Texture.h">
       <Filter>Src</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Font.h">
+      <Filter>Src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -89,6 +95,12 @@
       <Filter>Res</Filter>
     </None>
     <None Include="Res\Sprite.vert">
+      <Filter>Res</Filter>
+    </None>
+    <None Include="Res\Font.frag">
+      <Filter>Res</Filter>
+    </None>
+    <None Include="Res\Font.vert">
       <Filter>Res</Filter>
     </None>
   </ItemGroup>

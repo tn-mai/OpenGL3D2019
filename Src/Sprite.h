@@ -32,6 +32,10 @@ public:
 
   void Position(const glm::vec3& p) { position = p; }
   const glm::vec3& Position() const { return position; }
+  void Rotation(float r) { rotation = r; }
+  float Rotation() const { return rotation; }
+  void Scale(const glm::vec2& s) { scale = s; }
+  const glm::vec2& Scale() const { return scale; }
   void Color(const glm::vec4& c) { color = c; }
   const glm::vec4& Color() const { return color; }
   void Rectangle(const Rect& r) { rect = r; }
@@ -40,7 +44,9 @@ public:
   void Texture(const Texture::Image2DPtr& tex);
 
 private:
-  glm::vec3 position;
+  glm::vec3 position = glm::vec3(0);
+  glm::f32 rotation = 0;
+  glm::vec2 scale = glm::vec2(1);
   glm::vec4 color = glm::vec4(1);
   Rect rect = { glm::vec2(0, 0), glm::vec2(1, 1) };
 
@@ -58,7 +64,7 @@ public:
   SpriteRenderer(const SpriteRenderer&) = delete;
   SpriteRenderer& operator=(const SpriteRenderer&) = delete;
 
-  bool Init(size_t maxSpriteCount);
+  bool Init(size_t maxSpriteCount, const char* vsPath, const char* fsPath);
   void BeginUpdate();
   bool AddVertices(const Sprite&);
   void EndUpdate();
