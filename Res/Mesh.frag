@@ -16,5 +16,8 @@ uniform sampler2D texColor;
 */
 void main()
 {
-  fragColor = inColor * texture(texColor, inTexCoord);
+  vec3 vLight = normalize(vec3(1, -2, -1));
+  float power = dot(normalize(inNormal), -vLight);
+  fragColor = inColor;// * texture(texColor, inTexCoord);
+  fragColor.rgb *= power;
 }
