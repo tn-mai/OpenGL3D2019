@@ -73,7 +73,9 @@ public:
   void Bind();
   void Unbind();
 
+  void CreateCube(const char* name);
   void CreateCircle(const char* name, size_t segments);
+  void CreateSphere(const char* name, size_t segments, size_t rings);
 
 private:
   BufferObject vbo;
