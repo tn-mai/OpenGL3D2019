@@ -65,8 +65,6 @@ void TitleScene::Render()
 //  spriteRenderer.Draw(screenSize);
 //  fontRenderer.Draw(screenSize);
 
-  glDisable(GL_CULL_FACE);
-
   meshBuffer.Bind();
   progMesh->Use();
 
