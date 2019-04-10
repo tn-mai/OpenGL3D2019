@@ -4,6 +4,7 @@
 #include "TitleScene.h"
 #include "MainGameScene.h"
 #include "../GLFWEW.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 /**
 * コンストラクタ.
@@ -25,6 +26,10 @@ bool TitleScene::Initialize()
   fontRenderer.LoadFromFile("Res/font.fnt");
   Sprite spr(std::make_shared<Texture::Image2D>("Res/Title.tga"));
   sprites.push_back(spr);
+  meshBuffer.Init(sizeof(Mesh::Vertex) * 10000, sizeof(GLushort) * 30000);
+  meshBuffer.CreateCircle("Circle", 8);
+
+  progMesh = Shader::Cache::Instance().Create("Res/Mesh.vert", "Res/Mesh.frag");
   return true;
 }
 
@@ -57,8 +62,25 @@ void TitleScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
   const glm::vec2 screenSize(window.Width(), window.Height());
-  spriteRenderer.Draw(screenSize);
-  fontRenderer.Draw(screenSize);
+//  spriteRenderer.Draw(screenSize);
+//  fontRenderer.Draw(screenSize);
+
+  glDisable(GL_CULL_FACE);
+
+  meshBuffer.Bind();
+  progMesh->Use();
+
+  const glm::mat4 matView = glm::lookAt(glm::vec3(10, 10, 10), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+  const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
+  const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
+  const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
+  progMesh->SetViewProjectionMatrix(matProj * matView * matModel);
+
+  const Mesh::Mesh& mesh = meshBuffer.GetMesh("Circle");
+  glDrawElementsBaseVertex(mesh.mode, mesh.count, mesh.type, mesh.indices, mesh.baseVertex);
+
+  progMesh->Unuse();
+  meshBuffer.Unbind();
 }
 
 /**

@@ -47,6 +47,9 @@
     <ClCompile Include="Src\Font.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Mesh.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Scene.h">
@@ -88,6 +91,9 @@
     <ClInclude Include="Src\Font.h">
       <Filter>Src</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Mesh.h">
+      <Filter>Src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -101,6 +107,12 @@
       <Filter>Res</Filter>
     </None>
     <None Include="Res\Font.vert">
+      <Filter>Res</Filter>
+    </None>
+    <None Include="Res\Mesh.frag">
+      <Filter>Res</Filter>
+    </None>
+    <None Include="Res\Mesh.vert">
       <Filter>Res</Filter>
     </None>
   </ItemGroup>

@@ -131,6 +131,7 @@
     <ClCompile Include="Src\Font.cpp" />
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\Main.cpp" />
+    <ClCompile Include="Src\Mesh.cpp" />
     <ClCompile Include="Src\Scenes\GameOverScene.cpp" />
     <ClCompile Include="Src\Scenes\MainGameScene.cpp" />
     <ClCompile Include="Src\Scenes\StatusScene.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="Src\Font.h" />
     <ClInclude Include="Src\Geometry.h" />
     <ClInclude Include="Src\GLFWEW.h" />
+    <ClInclude Include="Src\Mesh.h" />
     <ClInclude Include="Src\Scene.h" />
     <ClInclude Include="Src\Scenes\GameOverScene.h" />
     <ClInclude Include="Src\Scenes\MainGameScene.h" />
@@ -158,6 +160,8 @@
     <None Include="packages.config" />
     <None Include="Res\Font.frag" />
     <None Include="Res\Font.vert" />
+    <None Include="Res\Mesh.frag" />
+    <None Include="Res\Mesh.vert" />
     <None Include="Res\Sprite.frag" />
     <None Include="Res\Sprite.vert" />
   </ItemGroup>

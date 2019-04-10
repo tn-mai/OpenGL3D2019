@@ -6,6 +6,7 @@
 #include "../Scene.h"
 #include "../Sprite.h"
 #include "../Font.h"
+#include "../Mesh.h"
 #include <vector>
 
 /**
@@ -23,6 +24,8 @@ private:
   std::vector<Sprite> sprites;
   SpriteRenderer spriteRenderer;
   Font::Renderer fontRenderer;
+  Mesh::Buffer meshBuffer;
+  Shader::ProgramPtr progMesh;
 };
 
 #endif // TITLESCENE_H_INCLUDED
