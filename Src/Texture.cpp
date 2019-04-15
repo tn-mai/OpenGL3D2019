@@ -389,7 +389,7 @@ bool LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileSiz
     return false; // 未対応のTGAファイル、またはTGAふぁいるではない.
   }
   const int pixelDepth = tgaHeader[16];
-  if (pixelDepth != 16 && pixelDepth != 24 && pixelDepth != 32) {
+  if (pixelDepth != 8 && pixelDepth != 16 && pixelDepth != 24 && pixelDepth != 32) {
     return false; // 未対応のTGAファイル、またはTGAふぁいるではない.
   }
   const int imageSize = width * height * pixelDepth / 8;
