@@ -28,21 +28,21 @@ public:
 
   const std::string& Name() const { return name; }
 
-  void Show() {
+  virtual void Show() {
     isVisible = true;
     std::cout << "Scene Show: " << name << "\n";
   }
-  void Hide() {
+  virtual void Hide() {
     isVisible = false;
     std::cout << "Scene Hide: " << name << "\n";
   }
   bool IsVisible() const { return isVisible; }
 
-  void Activate() {
+  virtual void Activate() {
     isActive = true;
     std::cout << "Scene Activate: " << name << "\n";
   }
-  void Deactivate() {
+  virtual void Deactivate() {
     isActive = false;
     std::cout << "Scene Deactivate: " << name << "\n";
   }
