@@ -18,6 +18,6 @@ void main()
 {
   vec3 vLight = normalize(vec3(1, -2, -1));
   float power = dot(normalize(inNormal), -vLight);
-  fragColor = inColor;// * texture(texColor, inTexCoord);
+  fragColor = inColor * texture(texColor, inTexCoord);
   fragColor.rgb *= power;
 }

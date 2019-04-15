@@ -138,6 +138,7 @@
     <ClCompile Include="Src\Scenes\TitleScene.cpp" />
     <ClCompile Include="Src\Shader.cpp" />
     <ClCompile Include="Src\Sprite.cpp" />
+    <ClCompile Include="Src\Terrain.cpp" />
     <ClCompile Include="Src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -154,6 +155,7 @@
     <ClInclude Include="Src\Scenes\TitleScene.h" />
     <ClInclude Include="Src\Shader.h" />
     <ClInclude Include="Src\Sprite.h" />
+    <ClInclude Include="Src\Terrain.h" />
     <ClInclude Include="Src\Texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -164,6 +166,9 @@
     <None Include="Res\Mesh.vert" />
     <None Include="Res\Sprite.frag" />
     <None Include="Res\Sprite.vert" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Res\HeightMap.tga" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
