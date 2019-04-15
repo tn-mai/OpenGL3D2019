@@ -106,10 +106,8 @@ void TitleScene::Render()
   progMesh->SetViewProjectionMatrix(matProj * matView * matModel);
 
   texTerrain->Bind(0);
-  const Mesh::Mesh& meshTerrain = meshBuffer.GetMesh("Terrain");
-  glDrawElementsBaseVertex(meshTerrain.mode, meshTerrain.count, meshTerrain.type, meshTerrain.indices, meshTerrain.baseVertex);
-  const Mesh::Mesh& mesh = meshBuffer.GetMesh("Circle");
-  glDrawElementsBaseVertex(mesh.mode, mesh.count, mesh.type, mesh.indices, mesh.baseVertex);
+  meshBuffer.GetMesh("Terrain").Draw();
+  meshBuffer.GetMesh("Circle").Draw();
   texTerrain->Unbind(0);
 
   progMesh->Unuse();

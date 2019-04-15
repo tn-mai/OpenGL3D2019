@@ -10,6 +10,16 @@
 namespace Mesh {
 
 /**
+* メッシュを描画する.
+*
+* 事前にVAO、シェーダー、テクスチャ等をバインドしておくこと.
+*/
+void Mesh::Draw() const
+{
+  glDrawElementsBaseVertex(mode, count, type, indices, baseVertex);
+}
+  
+/**
 * メッシュバッファを初期化する.
 *
 * @param vboSize VBOのバイトサイズ.

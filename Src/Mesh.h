@@ -44,6 +44,8 @@ struct Mesh
   GLenum type = GL_UNSIGNED_SHORT;
   const GLvoid* indices = 0;
   GLint baseVertex = 0;
+
+  void Draw() const;
 };
 
 /**
