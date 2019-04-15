@@ -71,12 +71,14 @@ public:
       Current().Deactivate();
     }
     stack.push_back(p);
+    Current().Initialize();
     Current().Activate();
     std::cout << "SceneStack Push: " << p->Name() << "\n";
   }
   void Pop() {
     if (!stack.empty()) {
       Current().Deactivate();
+      Current().Finalize();
     }
     const std::string sceneName = stack.back()->Name();
     stack.pop_back();
@@ -89,9 +91,11 @@ public:
     const std::string sceneName = stack.back()->Name();
     if (!stack.empty()) {
       Current().Deactivate();
+      Current().Finalize();
       stack.pop_back();
     }
     stack.push_back(p);
+    Current().Initialize();
     Current().Activate();
     std::cout << "SceneStack Replace: " << sceneName << " -> " << p->Name() << "\n";
   }
@@ -102,7 +106,6 @@ public:
 
   void Update(float deltaTime) {
     for (auto& e : stack) {
-      if (e->IsActive())
       e->Update(*this, deltaTime);
     }
   }
