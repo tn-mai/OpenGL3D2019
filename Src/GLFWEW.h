@@ -7,6 +7,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <array>
+#include <glm/vec2.hpp>
 
 namespace GLFWEW {
 
@@ -27,6 +28,7 @@ public:
   double DeltaTime() const { return deltaTime; }
   bool KeyDown(int key) const;
   bool KeyPressed(int key) const;
+  glm::vec2 MousePosition() const;
 
 private:
   Window() = default;

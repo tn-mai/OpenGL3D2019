@@ -203,4 +203,16 @@ void Window::SwapBuffers() const
   glfwSwapBuffers(window);
 }
 
+/**
+* マウスの座標を取得する.
+*
+* @return ウィンドウの左上隅を(0,0)としたマウスの座標.
+*/
+glm::vec2 Window::MousePosition() const
+{
+  double x, y;
+  glfwGetCursorPos(window, &x, &y);
+  return glm::vec2(x, y);
+}
+
 } // namespace GLFWEW
