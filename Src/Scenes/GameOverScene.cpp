@@ -20,6 +20,8 @@ GameOverScene::GameOverScene() : Scene("GameOverScene")
 */
 bool GameOverScene::Initialize()
 {
+  fontRenderer.Init(1000);
+  fontRenderer.LoadFromFile("Res/font.fnt");
   return true;
 }
 
@@ -31,6 +33,15 @@ bool GameOverScene::Initialize()
 */
 void GameOverScene::Update(SceneStack& sceneStack, float deltaTime)
 {
+  fontRenderer.BeginUpdate();
+  fontRenderer.Scale(glm::vec2(1));
+  fontRenderer.Color(glm::vec4(1));
+  fontRenderer.AddString(glm::vec2(-600, 320), L"ゲームオーバー画面");
+  fontRenderer.Scale(glm::vec2(3));
+  fontRenderer.Color(glm::vec4(1, 0.2f, 0.1f, 1));
+  fontRenderer.AddString(glm::vec2(-288, 0), L"ゲームオーバー");
+  fontRenderer.EndUpdate();
+
   GLFWEW::Window& window = GLFWEW::Window::Instance();
   if (window.KeyDown(GLFW_KEY_ENTER)) {
     sceneStack.Replace(std::make_shared<TitleScene>());
@@ -41,6 +52,9 @@ void GameOverScene::Update(SceneStack& sceneStack, float deltaTime)
 */
 void GameOverScene::Render()
 {
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  const glm::vec2 screenSize(window.Width(), window.Height());
+  fontRenderer.Draw(screenSize);
 }
 
 /**

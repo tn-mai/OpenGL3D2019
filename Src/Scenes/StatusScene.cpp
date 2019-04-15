@@ -19,6 +19,8 @@ StatusScene::StatusScene() : Scene("StatusScene")
 */
 bool StatusScene::Initialize()
 {
+  fontRenderer.Init(1000);
+  fontRenderer.LoadFromFile("Res/font.fnt");
   return true;
 }
 
@@ -30,8 +32,16 @@ bool StatusScene::Initialize()
 */
 void StatusScene::Update(SceneStack& sceneStack, float deltaTime)
 {
+  fontRenderer.BeginUpdate();
+  fontRenderer.AddString(glm::vec2(-600, 320), L"ÉXÉeÅ[É^ÉXâÊñ ");
+  fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 4), L"ëÃóÕÅFÅ@ÇQÇOÅ^ÇQÇQ");
+  fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 6), L"ñ@óÕÅFÅ@ÇPÇTÅ^ÇPÇT");
+  fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 8), L"ïêäÌÅFÅ@ì∫ÇÃé‡èÒ");
+  fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 10), L"ñhãÔÅFÅ@å√Ç—ÇΩè÷ïtÇØàﬂ");
+  fontRenderer.EndUpdate();
+
   GLFWEW::Window& window = GLFWEW::Window::Instance();
-  if (window.KeyDown(GLFW_KEY_ENTER)) {
+  if (window.KeyDown(GLFW_KEY_SPACE)) {
     sceneStack.Pop();
   }
 }
@@ -41,6 +51,9 @@ void StatusScene::Update(SceneStack& sceneStack, float deltaTime)
 */
 void StatusScene::Render()
 {
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  const glm::vec2 screenSize(window.Width(), window.Height());
+  fontRenderer.Draw(screenSize);
 }
 
 /**
