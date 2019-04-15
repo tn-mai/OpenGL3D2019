@@ -42,11 +42,9 @@ bool Renderer::LoadFromFile(const char* filename)
   }
 
   int line = 1;
-  float fontSize;
   int ret = fscanf(fp.get(), "info face=%*s size=%f bold=%*d italic=%*d charset=%*s"
-    " unicode=%*d stretchH=%*d smooth=%*d aa=%*d padding=%*d,%*d,%*d,%*d spacing=%*d,%*d", &fontSize);
+    " unicode=%*d stretchH=%*d smooth=%*d aa=%*d padding=%*d,%*d,%*d,%*d spacing=%*d,%*d", &baseFontSize);
   ++line;
-  const float reciprocalFontSize = 1.0f / fontSize;
 
   glm::vec2 scale;
   ret = fscanf(fp.get(), " common lineHeight=%*d base=%*d scaleW=%f scaleH=%f pages=%*d packed=%*d", &scale.x, &scale.y);
@@ -99,10 +97,8 @@ bool Renderer::LoadFromFile(const char* filename)
       std::cerr << "ERROR: " << filename << "の読み込みに失敗(line=" << line << ")\n";
       return false;
     }
-    font.offset.y *= -1;
-    uv.y = scale.y - uv.y - font.size.y;
-    font.uv[0] = uv;// *reciprocalScale;
-    font.uv[1] = (uv + font.size);// *reciprocalScale;
+    uv.y = scale.y - uv.y - font.size.y; // フォントファイルは左上が原点なので、OpenGLの座標系(左下が原点)に変換.
+    font.uv = uv;;
     if (font.id < 65536) {
       fontList[font.id] = font;
       if (font.xadvance > fixedAdvance) {
@@ -161,14 +157,14 @@ bool Renderer::AddString(const glm::vec2& position, const wchar_t* str)
   for (const wchar_t* itr = str; *itr; ++itr) {
     const FontInfo& font = fontList[*itr];
     if (font.id >= 0 && font.size.x && font.size.y) {
-      const glm::vec2 size = font.size * scale;
-      glm::vec3 offsetedPos = glm::vec3(pos + font.offset * scale, font.page);
+      const glm::vec2 baseOffset = (font.size - baseFontSize) * 0.5f * scale;
+      glm::vec3 offsetedPos = glm::vec3(pos + baseOffset + font.offset * scale, 0);
       if (!propotional) {
         offsetedPos.x = pos.x;
       }
       sprite.Position(offsetedPos);
-      sprite.Rectangle(Rect{ font.uv[0], font.uv[1] - font.uv[0] });
-      sprite.Scale(size / sprite.Rectangle().size);
+      sprite.Rectangle({ font.uv, font.size });
+      sprite.Scale(scale);
       sprite.Color(color);
       if (!spriteRenderer.AddVertices(sprite)) {
         return false;

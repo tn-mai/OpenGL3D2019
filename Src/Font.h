@@ -39,6 +39,7 @@ private:
 
   glm::vec2 scale = glm::vec2(1); ///< フォントを描画するときの拡大率.
   glm::vec4 color = glm::vec4(1); ///< フォントを描画するときの色.
+  float baseFontSize = 32;
   bool propotional = true;
   float fixedAdvance = 0;
 
@@ -46,7 +47,7 @@ private:
   struct FontInfo {
     int id = -1;        ///< 文字コード.
     int page = 0;       ///< フォントが含まれる画像の番号.
-    glm::vec2 uv[2]; ///< フォント画像のテクスチャ座標.
+    glm::vec2 uv; ///< フォント画像のテクスチャ座標.
     glm::vec2 size;     ///< フォント画像の表示サイズ.
     glm::vec2 offset;   ///< 表示位置をずらす距離.
     float xadvance = 0; ///< カーソルを進める距離.
