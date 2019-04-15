@@ -7,8 +7,8 @@ out vec4 fragColor;
 
 uniform sampler2D texColor;
 
-const float smoothing = 1.0 / 16.0;
-const vec2 thicknessAndOutline = vec2(0.67, 0.125);
+const float smoothing = 0.05;
+const vec2 thicknessAndOutline = vec2(0.67, 0.25);
 const vec4 borderColor = vec4(0.1, 0.1, 0.1, 1.0);
 
 void main()
