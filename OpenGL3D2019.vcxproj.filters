@@ -82,9 +82,6 @@
     <ClInclude Include="Src\Shader.h">
       <Filter>Src</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Geometry.h">
-      <Filter>Src</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Sprite.h">
       <Filter>Src</Filter>
     </ClInclude>

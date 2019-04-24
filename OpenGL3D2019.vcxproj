@@ -146,7 +146,6 @@
     <ClInclude Include="Src\BufferObject.h" />
     <ClInclude Include="Src\d3dx12.h" />
     <ClInclude Include="Src\Font.h" />
-    <ClInclude Include="Src\Geometry.h" />
     <ClInclude Include="Src\GLFWEW.h" />
     <ClInclude Include="Src\Mesh.h" />
     <ClInclude Include="Src\Scene.h" />
