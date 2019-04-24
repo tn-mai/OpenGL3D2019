@@ -132,6 +132,7 @@
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\Mesh.cpp" />
+    <ClCompile Include="Src\Scene.cpp" />
     <ClCompile Include="Src\Scenes\GameOverScene.cpp" />
     <ClCompile Include="Src\Scenes\MainGameScene.cpp" />
     <ClCompile Include="Src\Scenes\StatusScene.cpp" />
