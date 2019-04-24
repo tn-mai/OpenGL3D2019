@@ -21,7 +21,7 @@ public:
   virtual void Update(SceneStack&, float) override;
   virtual void Render() override;
   virtual void Finalize() override;
-  virtual void Activate() override;
+  virtual void Play() override;
 
 private:
   Font::Renderer fontRenderer;
@@ -29,7 +29,7 @@ private:
   Shader::ProgramPtr progMesh;
   Terrain::HeightMap heightMap;
   Texture::Image2DPtr texTerrain;
-  glm::vec3 pos = glm::vec3(100, 100, 100);
+  glm::vec3 pos = glm::vec3(100, 10, 100);
   glm::vec3 dir = glm::vec3(0, 0, -1);
   glm::vec2 prevMousePos = glm::vec2(0, 0);
 };

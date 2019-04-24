@@ -63,3 +63,11 @@ void StatusScene::Finalize()
 {
 }
 
+/**
+* ƒV[ƒ“‚ğŠˆ“®ó‘Ô‚É‚·‚é.
+*/
+void StatusScene::Play()
+{
+  GLFWEW::Window::Instance().EnableMouseCursor();
+  Scene::Play();
+}

@@ -121,13 +121,15 @@ void MainGameScene::Render()
 */
 void MainGameScene::Finalize()
 {
+  GLFWEW::Window::Instance().EnableMouseCursor();
 }
 
 /**
-* シーンをアクティブにする.
+* シーンを活動状態にする.
 */
-void MainGameScene::Activate()
+void MainGameScene::Play()
 {
+  GLFWEW::Window::Instance().DisableMouseCursor();
   prevMousePos = GLFWEW::Window::Instance().MousePosition();
-  Scene::Activate();
+  Scene::Play();
 }

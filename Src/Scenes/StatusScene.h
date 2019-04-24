@@ -17,6 +17,7 @@ public:
   virtual void Update(SceneStack&, float) override;
   virtual void Render() override;
   virtual void Finalize() override;
+  virtual void Play() override;
 public:
   Font::Renderer fontRenderer;
 };
