@@ -20,7 +20,7 @@ public:
   virtual ~Scene();
 
   virtual bool Initialize() = 0 {}
-  virtual void ProcessInput(SceneStack&, float) = 0 {}
+  virtual void ProcessInput(SceneStack&, float) {}
   virtual void Update(SceneStack&, float) = 0 {}
   virtual void Render() = 0 {}
   virtual void Finalize() = 0 {}
