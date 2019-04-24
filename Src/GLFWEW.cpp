@@ -215,4 +215,22 @@ glm::vec2 Window::MousePosition() const
   return glm::vec2(x, y);
 }
 
+/**
+* マウスカーソルを非表示にする.
+*
+* カーソル移動情報は、引き続き取得可能.
+*/
+void Window::DisableMouseCursor()
+{
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+/**
+* マウスカーソルを表示する.
+*/
+void Window::EnableMouseCursor()
+{
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
 } // namespace GLFWEW

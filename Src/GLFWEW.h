@@ -29,6 +29,8 @@ public:
   bool KeyDown(int key) const;
   bool KeyPressed(int key) const;
   glm::vec2 MousePosition() const;
+  void DisableMouseCursor();
+  void EnableMouseCursor();
 
 private:
   Window() = default;
