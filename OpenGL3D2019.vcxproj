@@ -130,6 +130,7 @@
     <ClCompile Include="Src\BufferObject.cpp" />
     <ClCompile Include="Src\Font.cpp" />
     <ClCompile Include="Src\GLFWEW.cpp" />
+    <ClCompile Include="Src\json11\json11.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\Mesh.cpp" />
     <ClCompile Include="Src\Scene.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="Src\d3dx12.h" />
     <ClInclude Include="Src\Font.h" />
     <ClInclude Include="Src\GLFWEW.h" />
+    <ClInclude Include="Src\json11\json11.hpp" />
     <ClInclude Include="Src\Mesh.h" />
     <ClInclude Include="Src\Scene.h" />
     <ClInclude Include="Src\Scenes\GameOverScene.h" />

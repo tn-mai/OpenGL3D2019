@@ -5,6 +5,8 @@
 #define MESH_H_INCLUDED
 #include <GL/glew.h>
 #include "BufferObject.h"
+#include "json11/json11.hpp"
+#include "Texture.h"
 #include <glm/glm.hpp>
 #include <vector>
 #include <unordered_map>
@@ -31,6 +33,38 @@ struct VertexAttribute
   size_t offset = 0;
 };
 
+// マテリアル.
+struct Material {
+  glm::vec4 baseColor = glm::vec4(1);
+  Texture::Image2DPtr texture;
+};
+
+// メッシュプリミティブ.
+struct Primitive {
+  GLenum mode;
+  GLsizei count;
+  GLenum type;
+  const GLvoid* indices;
+  GLint baseVertex = 0;
+  VertexAttribute attributes[8];
+  int material;
+};
+
+// メッシュデータ.
+struct MeshData {
+  std::string name;
+  std::vector<Primitive> primitives;
+};
+
+// ファイル.
+struct File {
+  std::string name; // ファイル名.
+  std::vector<MeshData> meshes;
+  std::vector<Material> materials;
+  const VertexArrayObject* vao = nullptr;
+};
+using FilePtr = std::shared_ptr<File>;
+
 /**
 * 描画するメッシュデータ.
 *
@@ -38,14 +72,20 @@ struct VertexAttribute
 */
 struct Mesh
 {
+  Mesh() = default;
+  Mesh(const FilePtr& f, int id) : file(f), meshId(id) {}
+  void Draw() const;
+
   std::string name;
+
   GLenum mode = GL_TRIANGLES;
   GLsizei count = 0;
   GLenum type = GL_UNSIGNED_SHORT;
   const GLvoid* indices = 0;
   GLint baseVertex = 0;
 
-  void Draw() const;
+  int meshId = 0;
+  FilePtr file;
 };
 
 /**
@@ -71,7 +111,8 @@ public:
   GLintptr AddVertexData(const void* data, size_t size);
   GLintptr AddIndexData(const void* data, size_t size);
   void AddMesh(const Mesh&);
-  const Mesh& GetMesh(const char* meshName) const;
+  bool LoadMesh(const char* path);
+  Mesh GetMesh(const char* meshName) const;
   void Bind();
   void Unbind();
 
@@ -85,7 +126,15 @@ private:
   VertexArrayObject vao;
   GLintptr vboEnd = 0;
   GLintptr iboEnd = 0;
-  std::unordered_map<std::string, Mesh> meshes;
+  struct MeshIndex {
+    FilePtr file;
+    size_t index = 0;
+  };
+  std::unordered_map<std::string, MeshIndex> meshes;
+  std::unordered_map<std::string, FilePtr> files;
+
+  bool SetAttribute(
+    Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);
 };
 
 } // namespace Mesh

@@ -12,6 +12,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Src\json11">
+      <UniqueIdentifier>{8f2b3ac9-20d3-49d4-ae99-3323089b067a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Main.cpp">
@@ -56,6 +59,9 @@
     <ClCompile Include="Src\Scene.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="Src\json11\json11.cpp">
+      <Filter>Src\json11</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Scene.h">
@@ -99,6 +105,9 @@
     </ClInclude>
     <ClInclude Include="Src\Terrain.h">
       <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\json11\json11.hpp">
+      <Filter>Src\json11</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
