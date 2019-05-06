@@ -109,6 +109,11 @@ bool Window::Init(int w, int h, const char* title)
   glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
   std::cout << "GL_MAX_UNIFORM_BLOCK_SIZE: " << maxUniformBlockSize / 1024 / 1024 << " MBytes\n";
 
+  const char* glfwVersion = glfwGetVersionString();
+  std::cout << "GLFW Version: " << glfwVersion << "\n";
+  const char* glewVersion = reinterpret_cast<const char*>(glewGetString(GLEW_VERSION));
+  std::cout << "GLEW Version: " << glewVersion << "\n";
+
   ResetDeltaTime();
 
   isInitialized = true;
@@ -133,6 +138,8 @@ void Window::Update()
       keyState[i] = KeyState::release;
     }
   }
+
+  UpdateGamePad();
 
   const double t = glfwGetTime();
   deltaTime = t - prevTime;
@@ -231,6 +238,111 @@ void Window::DisableMouseCursor()
 void Window::EnableMouseCursor()
 {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+/**
+* ジョイスティックのアナログ入力装置ID.
++
+* @note XBOX360コントローラー基準.
+*/
+enum JOYSTICK_AXES {
+  JOYSTICK_AXES_LEFT_X,  ///< 左スティックのX軸.
+  JOYSTICK_AXES_LEFT_Y,  ///< 左スティックのY軸.
+  JOYSTICK_AXES_TRIGGER, ///< アナログトリガー.
+  JOYSTICK_AXES_RIGHT_Y, ///< 右スティックのY軸.
+  JOYSTICK_AXES_RIGHT_X, ///< 右スティックのX軸.
+};
+
+/**
+* ジョイスティックのデジタル入力装置ID.
+*
+* @note Xbox Oneコントローラー準拠.
+*/
+enum JOYSTICK_BUTTON {
+  JOYSTICK_BUTTON_A, ///< Aボタン.
+  JOYSTICK_BUTTON_B, ///< Bボタン.
+  JOYSTICK_BUTTON_X, ///< Xボタン.
+  JOYSTICK_BUTTON_Y, ///< Yボタン.
+  JOYSTICK_BUTTON_L, ///< Lボタン.
+  JOYSTICK_BUTTON_R, ///< Rボタン.
+  JOYSTICK_BUTTON_BACK, ///< Backボタン.
+  JOYSTICK_BUTTON_START, ///< Startボタン.
+  JOYSTICK_BUTTON_L_THUMB, ///< 左スティックボタン.
+  JOYSTICK_BUTTON_R_THUMB, ///< 右スティックボタン.
+  JOYSTICK_BUTTON_UP, ///< 上キー.
+  JOYSTICK_BUTTON_RIGHT, ///< 右キー.
+  JOYSTICK_BUTTON_DOWN, ///< 下キー.
+  JOYSTICK_BUTTON_LEFT, ///< 左キー.
+};
+
+/**
+* ゲームパッドの状態を更新する.
+*/
+void Window::UpdateGamePad()
+{
+  const uint32_t prevButtons = gamepad.buttons;
+  int axesCount, buttonCount;
+  const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
+  const uint8_t* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
+  if (axes && buttons && axesCount >= 2 && buttonCount >= 8) {
+    gamepad.buttons &= ~(GamePad::DPAD_UP | GamePad::DPAD_DOWN | GamePad::DPAD_LEFT | GamePad::DPAD_RIGHT);
+    static const float threshould = 0.3f;
+    if (axes[JOYSTICK_AXES_LEFT_Y] >= threshould) {
+      gamepad.buttons |= GamePad::DPAD_UP;
+    } else if (axes[JOYSTICK_AXES_LEFT_Y] <= -threshould) {
+      gamepad.buttons |= GamePad::DPAD_DOWN;
+    }
+    if (axes[JOYSTICK_AXES_LEFT_X] >= threshould) {
+      gamepad.buttons |= GamePad::DPAD_LEFT;
+    } else if (axes[JOYSTICK_AXES_LEFT_X] <= -threshould) {
+      gamepad.buttons |= GamePad::DPAD_RIGHT;
+    }
+    static const struct {
+      int glfwCode;
+      uint32_t gamepadCode;
+    } keyMap[] = {
+      { JOYSTICK_BUTTON_A, GamePad::A },
+      { JOYSTICK_BUTTON_B, GamePad::B },
+      { JOYSTICK_BUTTON_X, GamePad::X },
+      { JOYSTICK_BUTTON_Y, GamePad::Y },
+      { JOYSTICK_BUTTON_L, GamePad::L },
+      { JOYSTICK_BUTTON_R, GamePad::R },
+      { JOYSTICK_BUTTON_START, GamePad::START },
+    };
+    for (const auto& e : keyMap) {
+      if (buttons[e.glfwCode] == GLFW_PRESS) {
+        gamepad.buttons |= e.gamepadCode;
+      } else if (buttons[e.glfwCode] == GLFW_RELEASE) {
+        gamepad.buttons &= ~e.gamepadCode;
+      }
+    }
+  } else {
+    static const struct {
+      int glfwCode;
+      uint32_t gamepadCode;
+    } keyMap[] = {
+      { GLFW_KEY_W, GamePad::DPAD_UP },
+      { GLFW_KEY_A, GamePad::DPAD_DOWN },
+      { GLFW_KEY_S, GamePad::DPAD_LEFT },
+      { GLFW_KEY_D, GamePad::DPAD_RIGHT },
+      { GLFW_KEY_ENTER, GamePad::START },
+      { GLFW_KEY_J, GamePad::A },
+      { GLFW_KEY_K, GamePad::B },
+      { GLFW_KEY_U, GamePad::X },
+      { GLFW_KEY_I, GamePad::Y },
+      { GLFW_KEY_O, GamePad::L },
+      { GLFW_KEY_L, GamePad::R },
+    };
+    for (const auto& e : keyMap) {
+      const int key = glfwGetKey(window, e.glfwCode);
+      if (key == GLFW_PRESS) {
+        gamepad.buttons |= e.gamepadCode;
+      } else if (key == GLFW_RELEASE) {
+        gamepad.buttons &= ~e.gamepadCode;
+      }
+    }
+  }
+  gamepad.buttonDown = gamepad.buttons & ~prevButtons;
 }
 
 } // namespace GLFWEW
