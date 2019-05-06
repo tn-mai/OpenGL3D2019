@@ -92,7 +92,7 @@ bool Scene::IsVisible() const
 }
 
 /**
-*
+* コンストラクタ.
 */
 SceneStack::SceneStack()
 {
@@ -100,7 +100,9 @@ SceneStack::SceneStack()
 }
 
 /**
+* シーンをプッシュする.
 *
+* @param p 新しいシーン.
 */
 void SceneStack::Push(ScenePtr p)
 {
@@ -108,47 +110,56 @@ void SceneStack::Push(ScenePtr p)
     Current().Stop();
   }
   stack.push_back(p);
+  std::cout << "SceneStack Push: " << p->Name() << "\n";
   Current().Initialize();
   Current().Play();
-  std::cout << "SceneStack Push: " << p->Name() << "\n";
 }
 
 /**
-*
+* シーンをポップする.
 */
 void SceneStack::Pop()
 {
-  if (!stack.empty()) {
-    Current().Stop();
-    Current().Finalize();
+  if (stack.empty()) {
+    std::cout << "SceneStack Pop: [警告]シーンスタックが空です.\n";
+    return;
   }
-  const std::string sceneName = stack.back()->Name();
+  Current().Stop();
+  Current().Finalize();
+  const std::string sceneName = Current().Name();
   stack.pop_back();
+  std::cout << "SceneStack Pop: " << sceneName << "\n";
   if (!stack.empty()) {
     Current().Play();
   }
-  std::cout << "SceneStack Pop: " << sceneName << "\n";
 }
 
 /**
+* シーンを置き換える.
 *
+* @param p 新しいシーン.
 */
 void SceneStack::Replace(ScenePtr p)
 {
-  const std::string sceneName = stack.back()->Name();
-  if (!stack.empty()) {
+  std::string sceneName = "(Empty)";
+  if (stack.empty()) {
+    std::cout << "SceneStack Replace: [警告]シーンスタックが空です.\n";
+  } else {
+    sceneName = Current().Name();
     Current().Stop();
     Current().Finalize();
     stack.pop_back();
   }
   stack.push_back(p);
+  std::cout << "SceneStack Replace: " << sceneName << " -> " << p->Name() << "\n";
   Current().Initialize();
   Current().Play();
-  std::cout << "SceneStack Replace: " << sceneName << " -> " << p->Name() << "\n";
 }
 
 /**
+* 現在のシーンを取得する.
 *
+* @return 現在のシーン.
 */
 Scene& SceneStack::Current()
 {
@@ -156,7 +167,9 @@ Scene& SceneStack::Current()
 }
 
 /**
+* 現在のシーンを取得する.
 *
+* @return 現在のシーン.
 */
 const Scene& SceneStack::Current() const
 {
@@ -164,7 +177,9 @@ const Scene& SceneStack::Current() const
 }
 
 /**
+* シーンの数を取得する.
 *
+* @return スタックに積まれているシーンの数.
 */
 size_t SceneStack::Size() const
 {
@@ -172,7 +187,10 @@ size_t SceneStack::Size() const
 }
 
 /**
+* スタックが空かどうかを調べる.
 *
+* @retval true  スタックは空.
+* @retval false スタックに1つ以上のシーンが積まれている.
 */
 bool SceneStack::Empty() const
 {
@@ -180,7 +198,9 @@ bool SceneStack::Empty() const
 }
 
 /**
+* シーンを更新する.
 *
+* @param deltaTime 前回の更新からの経過時間(秒).
 */
 void SceneStack::Update(float deltaTime)
 {
@@ -190,7 +210,7 @@ void SceneStack::Update(float deltaTime)
 }
 
 /**
-*
+* シーンを描画する.
 */
 void SceneStack::Render()
 {
