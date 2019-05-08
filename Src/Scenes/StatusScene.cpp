@@ -41,7 +41,8 @@ void StatusScene::Update(SceneStack& sceneStack, float deltaTime)
   fontRenderer.EndUpdate();
 
   GLFWEW::Window& window = GLFWEW::Window::Instance();
-  if (window.KeyDown(GLFW_KEY_SPACE)) {
+  const GamePad gamepad = window.GetGamePad();
+  if (gamepad.buttonDown & GamePad::B) {
     sceneStack.Pop();
   }
 }

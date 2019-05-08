@@ -80,9 +80,10 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
     dir = normalize(dir);
 
     // ÉVÅ[ÉìêÿÇËë÷Ç¶.
-    if (window.KeyDown(GLFW_KEY_SPACE)) {
+    const GamePad gamepad = window.GetGamePad();
+    if (gamepad.buttonDown & GamePad::X) {
       sceneStack.Push(std::make_shared<StatusScene>());
-    } else if (window.KeyDown(GLFW_KEY_ENTER)) {
+    } else if (gamepad.buttonDown & GamePad::START) {
       sceneStack.Replace(std::make_shared<GameOverScene>());
     }
   }

@@ -51,7 +51,7 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
 
   // ÉVÅ[ÉìêÿÇËë÷Ç¶.
   GLFWEW::Window& window = GLFWEW::Window::Instance();
-  if (window.KeyDown(GLFW_KEY_ENTER)) {
+  if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
     sceneStack.Replace(std::make_shared<MainGameScene>());
   }
 }
