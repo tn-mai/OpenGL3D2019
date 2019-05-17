@@ -27,6 +27,9 @@ public:
   void Use() const;
   void Unuse() const;
   void SetViewProjectionMatrix(const glm::mat4&) const;
+  bool BindUniformBlock(const char* blockName, GLuint bindingPoint);
+  GLint GetUniformLocation(const char* uniformName) const;
+  void SetUniformInt(GLint location, GLint value) const;
 
 private:
   GLuint id = 0; // ÉvÉçÉOÉâÉÄID.
@@ -43,6 +46,7 @@ public:
   static Cache& Instance();
 
   ProgramPtr Create(const char* vsPath, const char* fsPath);
+  ProgramPtr Get(const char* vsPath, const char* fsPath) const;
   void Clear();
 
 private:

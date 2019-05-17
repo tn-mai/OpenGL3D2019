@@ -142,6 +142,7 @@
     <ClCompile Include="Src\Sprite.cpp" />
     <ClCompile Include="Src\Terrain.cpp" />
     <ClCompile Include="Src\Texture.cpp" />
+    <ClCompile Include="Src\UniformBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\BufferObject.h" />
@@ -159,6 +160,7 @@
     <ClInclude Include="Src\Sprite.h" />
     <ClInclude Include="Src\Terrain.h" />
     <ClInclude Include="Src\Texture.h" />
+    <ClInclude Include="Src\UniformBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -166,6 +168,8 @@
     <None Include="Res\Font.vert" />
     <None Include="Res\Mesh.frag" />
     <None Include="Res\Mesh.vert" />
+    <None Include="Res\SkeletalMesh.frag" />
+    <None Include="Res\SkeletalMesh.vert" />
     <None Include="Res\Sprite.frag" />
     <None Include="Res\Sprite.vert" />
   </ItemGroup>

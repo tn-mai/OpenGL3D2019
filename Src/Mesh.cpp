@@ -14,6 +14,251 @@
 namespace Mesh {
 
 /**
+*
+*/
+void Mesh::SetAnimation(int animationId)
+{
+  if (file) {
+    if (animationId >= 0 && animationId < static_cast<int>(file->animations.size())) {
+      animation = &file->animations[animationId];
+    }
+  }
+}
+
+/**
+*
+*/
+size_t Mesh::GetAnimationCount() const
+{
+  return file ? file->animations.size() : 0;
+}
+
+/**
+*
+*/
+void GetMeshNodeList(const Node* node, std::vector<const Node*>& list)
+{
+  if (node->mesh >= 0) {
+    list.push_back(node);
+  }
+  for (const auto& child : node->children) {
+    GetMeshNodeList(child, list);
+  }
+}
+
+/**
+*
+*/
+glm::mat4 DecomposeRotation(const glm::mat4& m)
+{
+  glm::vec3 scale;
+  scale.x = 1.0f / glm::length(glm::vec3(m[0]));
+  scale.y = 1.0f / glm::length(glm::vec3(m[1]));
+  scale.z = 1.0f / glm::length(glm::vec3(m[2]));
+
+  return glm::mat3(glm::scale(m, scale));
+}
+
+/**
+*
+*/
+template<typename T>
+T Interporation(const Timeline<T>& data, float frame)
+{
+  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
+    [](const KeyFrame<T>& keyFrame, float frame) { return keyFrame.frame < frame; });
+  if (maxFrame == data.timeline.begin()) {
+    return data.timeline.front().value;
+  }
+  if (maxFrame == data.timeline.end()) {
+    return data.timeline.back().value;
+  }
+  const auto minFrame = maxFrame - 1;
+  const float ratio = (frame - minFrame->frame) / (maxFrame->frame - minFrame->frame);
+  return minFrame->value * (1 - ratio) + maxFrame->value * ratio;
+}
+
+/**
+*
+*/
+template<>
+glm::quat Interporation(const Timeline<glm::quat>& data, float frame)
+{
+  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
+    [](const KeyFrame<glm::quat>& keyFrame, float frame) { return keyFrame.frame < frame; });
+  if (maxFrame == data.timeline.begin()) {
+    return data.timeline.front().value;
+  }
+  if (maxFrame == data.timeline.end()) {
+    return data.timeline.back().value;
+  }
+  const auto minFrame = maxFrame - 1;
+  const float ratio = (frame - minFrame->frame) / (maxFrame->frame - minFrame->frame);
+  return glm::slerp(minFrame->value, maxFrame->value, ratio);
+}
+
+struct AnimatedNodeTree {
+  struct Transformation {
+    glm::vec3 translation = glm::vec3(0);
+    glm::quat rotation = glm::quat(0, 0, 0, 1);
+    glm::vec3 scale = glm::vec3(1);
+    glm::mat4 matLocal = glm::mat4(1);
+    glm::mat4 matGlobal = glm::mat4(1);
+    bool isCalculated = false;
+    bool hasTransformation = false;
+  };
+  std::vector<Transformation> nodeTransformations;
+};
+
+/**
+*
+*/
+void CalcGlobalTransform(const std::vector<Node>& nodes, const Node& node, AnimatedNodeTree& animated)
+{
+  const int currentNodeId = &node - &nodes[0];
+  AnimatedNodeTree::Transformation& transformation = animated.nodeTransformations[currentNodeId];
+  if (transformation.isCalculated) {
+    return;
+  }
+
+  if (node.parent) {
+    CalcGlobalTransform(nodes, *node.parent, animated);
+    const int parentNodeId = node.parent - &nodes[0];
+    transformation.matLocal = animated.nodeTransformations[parentNodeId].matLocal;
+  } else {
+    transformation.matLocal = glm::mat4(1);
+  }
+  if (transformation.hasTransformation) {
+    const glm::mat4 T = glm::translate(glm::mat4(1), transformation.translation);
+    const glm::mat4 R = glm::mat4_cast(transformation.rotation);
+    const glm::mat4 S = glm::scale(glm::mat4(1), transformation.scale);
+    transformation.matLocal *= T * R * S;
+  } else {
+    transformation.matLocal *= node.matLocal;
+  }
+  transformation.matGlobal = transformation.matLocal * node.matInverseBindPose;
+  transformation.isCalculated = true;
+}
+
+/**
+* アニメーション補間された座標変換行列を計算する.
+*/
+AnimatedNodeTree MakeAnimatedNodeTree(const File& file, const Animation& animation, float keyFrame)
+{
+  AnimatedNodeTree tmp;
+  tmp.nodeTransformations.resize(file.nodes.size());
+  for (const auto& e : animation.scaleList) {
+    tmp.nodeTransformations[e.targetNodeId].scale = Interporation(e, keyFrame);
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+  }
+  for (const auto& e : animation.rotationList) {
+    tmp.nodeTransformations[e.targetNodeId].rotation = Interporation(e, keyFrame);
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+  }
+  for (const auto& e : animation.translationList) {
+    tmp.nodeTransformations[e.targetNodeId].translation = Interporation(e, keyFrame);
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+  }
+  for (auto& e : file.nodes) {
+    CalcGlobalTransform(file.nodes, e, tmp);
+  }
+  return tmp;
+}
+
+/**
+*
+*/
+MeshTransformation Mesh::CalculateTransform() const
+{
+  MeshTransformation transformation;
+  if (file && node) {
+    std::vector<const Node*> meshNodes;
+    meshNodes.reserve(32);
+    GetMeshNodeList(node, meshNodes);
+
+    if (animation) {
+      const AnimatedNodeTree tmp = MakeAnimatedNodeTree(*file, *animation, frame);
+      if (node->skin >= 0) {
+        const std::vector<int>& joints = file->skins[node->skin].joints;
+        transformation.transformations.resize(joints.size());
+        for (size_t i = 0; i < joints.size(); ++i) {
+          const int jointNodeId = joints[i];
+          transformation.transformations[i] = tmp.nodeTransformations[jointNodeId].matGlobal;
+        }
+        transformation.matRoot.resize(meshNodes.size(), glm::mat4(1));
+      } else {
+        transformation.matRoot.reserve(meshNodes.size());
+        for (const auto& e : meshNodes) {
+          const size_t nodeId = e - &file->nodes[0];
+          transformation.matRoot.push_back(tmp.nodeTransformations[nodeId].matGlobal);
+        }
+      }
+    }
+    
+    if (node->skin >= 0) {
+      if (animation) {
+        const AnimatedNodeTree tmp = MakeAnimatedNodeTree(*file, *animation, frame);
+        const std::vector<int>& joints = file->skins[node->skin].joints;
+        transformation.transformations.resize(joints.size());
+        for (size_t i = 0; i < joints.size(); ++i) {
+          const int jointNodeId = joints[i];
+          transformation.transformations[i] = tmp.nodeTransformations[jointNodeId].matGlobal;
+        }
+      } else {
+        const std::vector<int>& joints = file->skins[node->skin].joints;
+        transformation.transformations.resize(joints.size(), glm::mat4(1));
+      }
+      transformation.matRoot.resize(meshNodes.size(), glm::mat4(1));
+    } else {
+      transformation.matRoot.reserve(meshNodes.size());
+      for (const auto& e : meshNodes) {
+        transformation.matRoot.push_back(e->matGlobal);
+      }
+    }
+  }
+  return transformation;
+}
+
+/**
+* メッシュの状態を更新する.
+*
+* @param deltaTime 前回の更新からの経過時間(秒).
+*/
+void Mesh::Update(float deltaTime)
+{
+  if (animation) {
+    frame += deltaTime;
+    if (frame >= animation->totalTime) {
+      frame -= animation->totalTime;
+    } else if (frame < 0) {
+      frame += animation->totalTime;
+    }
+  }
+
+  UniformDataMeshMatrix uboData;
+  uboData.color = color;
+  const MeshTransformation mt = CalculateTransform();
+  for (size_t i = 0; i < mt.transformations.size(); ++i) {
+    uboData.matBones[i] = glm::transpose(mt.transformations[i]);
+  }
+  const glm::mat4 matT = glm::translate(glm::mat4(1), translation);
+  const glm::mat4 matR = glm::mat4_cast(rotation);
+  const glm::mat4 matS = glm::scale(glm::mat4(1), scale);
+  const glm::mat4 matTRS = matT * matR * matS;
+  for (size_t i = 0; i < mt.matRoot.size(); ++i) {
+    uboData.matModel[i] = glm::transpose(matTRS * mt.matRoot[i]);
+    uboData.matNormal[i] = matR * DecomposeRotation(mt.matRoot[i]);
+  }
+  if (mt.matRoot.empty()) {
+    uboData.matModel[0] = glm::transpose(matTRS);
+    uboData.matNormal[0] = matR;
+  }
+  uboSize = sizeof(glm::vec4) + sizeof(glm::mat3x4) * 8 + sizeof(glm::mat3x4) * mt.transformations.size();
+  uboSize = ((uboSize + 255) / 256) * 256;
+  uboOffset = parent->PushUniformData(&uboData, uboSize);
+}
+
+/**
 * メッシュを描画する.
 *
 * 事前にVAO、シェーダー、テクスチャ等をバインドしておくこと.
@@ -23,7 +268,15 @@ void Mesh::Draw() const
   if (!file || !file->vao) {
     return;
   }
-  const MeshData& meshData = file->meshes[meshId];
+
+  // TODO: シーンレベルの描画に対応すること.
+  //std::vector<const Node*> meshNodes;
+  //meshNodes.reserve(32);
+  //GetMeshNodeList(node, meshNodes);
+
+  parent->BindUniformData(uboOffset, uboSize);
+
+  const MeshData& meshData = file->meshes[node->mesh];
   GLuint prevTexId = 0;
   for (const auto& prim : meshData.primitives) {
     file->vao->ResetVertexAttribPointer();
@@ -66,7 +319,7 @@ void Mesh::Draw() const
 * @retval true  初期化成功.
 * @retval false 初期化失敗.
 */
-bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize)
+bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize)
 {
   if (!vbo.Create(GL_ARRAY_BUFFER, vboSize)) {
     return false;
@@ -86,6 +339,11 @@ bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize)
   vboEnd = 0;
   iboEnd = 0;
   meshes.reserve(100);
+
+  // TODO: バインディングポイントとUBO名の指定方法を検討する.
+  ubo = UniformBuffer::Create(uboSize, 0, "MeshMatrixUniformData");
+  uboData.reserve(uboSize);
+
   return true;
 }
 
@@ -147,9 +405,11 @@ void Buffer::AddMesh(const Mesh& mesh)
   pFile->meshes[0].primitives[0].material = 0;
   pFile->materials.resize(1);
   pFile->materials[0].baseColor = glm::vec4(1);
+  pFile->nodes.resize(1);
+  pFile->nodes[0].mesh = 0;
   pFile->vao = &vao;
   files.insert(std::make_pair(pFile->name, pFile));
-  meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, 0 }));
+  meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, &pFile->nodes[0] }));
   std::cout << "Mesh::Buffer: メッシュ'" << mesh.name << "'を追加.\n";
 }
 
@@ -160,14 +420,14 @@ void Buffer::AddMesh(const Mesh& mesh)
 *
 * @return meshNameと同じ名前を持つメッシュ.
 */
-Mesh Buffer::GetMesh(const char* meshName) const
+MeshPtr Buffer::GetMesh(const char* meshName) const
 {
   const auto itr = meshes.find(meshName);
   if (itr == meshes.end()) {
-    static const Mesh dummy;
+    static const MeshPtr dummy(new Mesh);
     return dummy;
   }
-  return Mesh(itr->second.file, itr->second.index);
+  return std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node);
 }
 
 /**
@@ -560,6 +820,32 @@ bool Buffer::SetAttribute(
 }
 
 /**
+* ノードのローカル姿勢行列を計算する.
+*
+* @param node gltfノード.
+*
+* @return nodeのローカル姿勢行列.
+*/
+glm::mat4 CalcLocalMatrix(const json11::Json& node)
+{
+  if (node["matrix"].is_array()) {
+    return GetMat4(node["matrix"]);
+  } else {
+    glm::mat4 m(1);
+    if (node["translation"].is_array()) {
+      m *= glm::translate(glm::mat4(1), GetVec3(node["translation"]));
+    }
+    if (node["rotation"].is_array()) {
+      m *= glm::mat4_cast(GetQuat(node["rotation"]));
+    }
+    if (node["scale"].is_array()) {
+      m *= glm::scale(glm::mat4(1), GetVec3(node["scale"]));
+    }
+    return m;
+  }
+}
+
+/**
 *
 */
 bool Buffer::LoadMesh(const char* path)
@@ -601,7 +887,6 @@ bool Buffer::LoadMesh(const char* path)
   const json11::Json& bufferViews = json["bufferViews"];
 
   // インデックスデータと頂点属性データのアクセッサIDを取得.
-  // とりあえず必要分のみということで、座標と法線のみ取っておく.
   file.meshes.reserve(json["meshes"].array_items().size());
   for (const auto& currentMesh : json["meshes"].array_items()) {
     MeshData mesh;
@@ -636,7 +921,7 @@ bool Buffer::LoadMesh(const char* path)
         size_t byteLength;
         GetBuffer(accessor, bufferViews, binFiles, &p, &byteLength);
         ibo.BufferSubData(iboEnd, byteLength, p);
-        iboEnd += ((byteLength + 3) / 4) * 4;
+        iboEnd += ((byteLength + 3) / 4) * 4; // 次に来るのがどのデータ型でも大丈夫なように4バイト境界に整列.
       }
 
       // 頂点属性.
@@ -678,14 +963,223 @@ bool Buffer::LoadMesh(const char* path)
     }
   }
 
+  // ノードツリーを構築.
+  {
+    const json11::Json& nodes = json["nodes"];
+    int i = 0;
+    file.nodes.resize(nodes.array_items().size());
+    for (const auto& node : nodes.array_items()) {
+      // 親子関係を構築.
+      // NOTE: ポインタを使わずともインデックスで十分かもしれない.
+      const std::vector<json11::Json>& children = node["children"].array_items();
+      file.nodes[i].children.reserve(children.size());
+      for (const auto& e : children) {
+        const int childJointId = e.int_value();
+        file.nodes[i].children.push_back(&file.nodes[childJointId]);
+        if (!file.nodes[childJointId].parent) {
+          file.nodes[childJointId].parent = &file.nodes[i];
+        }
+      }
+
+      // ローカル座標変換行列を計算.
+      file.nodes[i].matLocal = CalcLocalMatrix(nodes[i]);
+
+      ++i;
+    }
+
+    // シーンのルートノードを取得.
+    file.scenes.reserve(json["scenes"].array_items().size());
+    for (const auto& scene : json["scenes"].array_items()) {
+      Scene tmp;
+      tmp.rootNode = scene.int_value();
+      GetMeshNodeList(&file.nodes[tmp.rootNode], tmp.meshNodes);
+      file.scenes.push_back(tmp);
+    }
+  }
+
+  {
+    for (size_t i = 0; i < file.nodes.size(); ++i) {
+      file.nodes[i].matGlobal = file.nodes[i].matLocal;
+      Node* parent = file.nodes[i].parent;
+      while (parent) {
+        file.nodes[i].matGlobal = parent->matLocal * file.nodes[i].matGlobal;
+        parent = parent->parent;
+      }
+    }
+  }
+
+  file.skins.reserve(json["skins"].array_items().size());
+  for (const auto& skin : json["skins"].array_items()) {
+    Skin tmpSkin;
+
+    // バインドポーズ行列を取得.
+    const json11::Json& accessor = accessors[skin["inverseBindMatrices"].int_value()];
+    if (accessor["type"].string_value() != "MAT4") {
+      std::cerr << "ERROR: バインドポーズのtypeはMAT4でなくてはなりません \n";
+      std::cerr << "  type = " << accessor["type"].string_value() << "\n";
+      return false;
+    }
+    if (accessor["componentType"].int_value() != GL_FLOAT) {
+      std::cerr << "ERROR: バインドポーズのcomponentTypeはGL_FLOATでなくてはなりません \n";
+      std::cerr << "  type = 0x" << std::hex << accessor["componentType"].string_value() << "\n";
+      return false;
+    }
+
+    const void* p;
+    size_t byteLength;
+    GetBuffer(accessor, bufferViews, binFiles, &p, &byteLength);
+
+    // gltfのバッファデータはリトルエンディアン. 仕様に書いてある.
+    const std::vector<json11::Json>& joints = skin["joints"].array_items();
+    std::vector<glm::mat4> inverseBindPoseList;
+    inverseBindPoseList.resize(accessor["count"].int_value());
+    memcpy(inverseBindPoseList.data(), p, std::min(byteLength, inverseBindPoseList.size() * 64));
+    tmpSkin.joints.resize(joints.size());
+    for (size_t i = 0; i < joints.size(); ++i) {
+      const int jointId = joints[i].int_value();
+      tmpSkin.joints[i] = jointId;
+      file.nodes[jointId].matInverseBindPose = inverseBindPoseList[i];
+    }
+    file.skins.push_back(tmpSkin);
+  }
+
+  {
+    const std::vector<json11::Json>& nodes = json["nodes"].array_items();
+    for (size_t i = 0; i < nodes.size(); ++i) {
+      const json11::Json& meshId = nodes[i]["mesh"];
+      if (meshId.is_number()) {
+        file.nodes[i].mesh = meshId.int_value();
+      }
+      const json11::Json& skinId = nodes[i]["skin"];
+      if (skinId.is_number()) {
+        file.nodes[i].skin = skinId.int_value();
+      }
+    }
+  }
+
+  // アニメーション.
+  {
+    for (const auto& animation : json["animations"].array_items()) {
+      Animation anime;
+      anime.translationList.reserve(32);
+      anime.rotationList.reserve(32);
+      anime.scaleList.reserve(32);
+
+      const std::vector<json11::Json>& channels = animation["channels"].array_items();
+      const std::vector<json11::Json>& samplers = animation["samplers"].array_items();
+      for (const json11::Json& e : channels) {
+        const int samplerId = e["sampler"].int_value();
+        const json11::Json& sampler = samplers[samplerId];
+        const json11::Json& target = e["target"];
+        const int targetNodeId = target["node"].int_value();
+
+        const int inputAccessorId = sampler["input"].int_value();
+        const int inputCount = accessors[inputAccessorId]["count"].int_value();
+        const void* pInput;
+        size_t inputByteLength;
+        GetBuffer(accessors[inputAccessorId], bufferViews, binFiles, &pInput, &inputByteLength);
+
+        const int outputAccessorId = sampler["output"].int_value();
+        const int outputCount = accessors[outputAccessorId]["count"].int_value();
+        const void* pOutput;
+        size_t outputByteLength;
+        GetBuffer(accessors[outputAccessorId], bufferViews, binFiles, &pOutput, &outputByteLength);
+
+        const std::string& path = target["path"].string_value();
+        anime.totalTime = 0;
+        if (path == "translation") {
+          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
+          const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
+          Timeline<glm::vec3> timeline;
+          timeline.timeline.reserve(inputCount);
+          for (int i = 0; i < inputCount; ++i) {
+            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
+            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
+          }
+          timeline.targetNodeId = targetNodeId;
+          anime.translationList.push_back(timeline);
+        } else if (path == "rotation") {
+          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
+          const glm::quat* pData = static_cast<const glm::quat*>(pOutput);
+          Timeline<glm::quat> timeline;
+          timeline.timeline.reserve(inputCount);
+          for (int i = 0; i < inputCount; ++i) {
+            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
+            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
+          }
+          timeline.targetNodeId = targetNodeId;
+          anime.rotationList.push_back(timeline);
+        } else if (path == "scale") {
+          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
+          const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
+          Timeline<glm::vec3> timeline;
+          timeline.timeline.reserve(inputCount);
+          for (int i = 0; i < inputCount; ++i) {
+            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
+            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
+          }
+          timeline.targetNodeId = targetNodeId;
+          anime.scaleList.push_back(timeline);
+        }
+      }
+      file.animations.push_back(anime);
+    }
+  }
+
   file.name = path;
   file.vao = &vao;
   files.insert(std::make_pair(file.name, pFile));
-  for (size_t i = 0; i < file.meshes.size(); ++i) {
-    meshes.insert(std::make_pair(file.meshes[i].name, MeshIndex{ pFile, i }));
+  for (size_t i = 0; i < file.nodes.size(); ++i) {
+    const int meshIndex = file.nodes[i].mesh;
+    if ( meshIndex < 0) {
+      continue;
+    }
+    const MeshData& mesh = file.meshes[meshIndex];
+    meshes.insert(std::make_pair(mesh.name, MeshIndex{ pFile, &pFile->nodes[i] }));
   }
 
   return true;
+}
+
+/**
+*
+*/
+void Buffer::ResetUniformData()
+{
+  uboData.clear();
+}
+
+/**
+*
+*/
+GLintptr Buffer::PushUniformData(const void* data, size_t size)
+{
+  if (uboData.size() + size >= static_cast<size_t>(ubo->Size())) {
+    return -1;
+  }
+  const uint8_t* p = static_cast<const uint8_t*>(data);
+  const GLintptr offset = static_cast<GLintptr>(uboData.size());
+  uboData.insert(uboData.end(), p, p + size);
+  uboData.resize(((uboData.size() + 255) / 256) * 256);
+  return offset;
+}
+
+/**
+*
+*/
+void Buffer::UploadUniformData()
+{
+  if (!uboData.empty()) {
+    ubo->BufferSubData(uboData.data(), 0, uboData.size());
+  }
+}
+
+/**
+*
+*/
+void Buffer::BindUniformData(GLintptr offset, GLsizeiptr size)
+{
+  ubo->BindBufferRange(offset, size);
 }
 
 } // namespace Mesh

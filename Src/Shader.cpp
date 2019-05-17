@@ -188,6 +188,57 @@ void Program::SetViewProjectionMatrix(const glm::mat4& m) const
 }
 
 /**
+* Uniformブロックをバインディング・ポイントに割り当てる.
+*
+* @param blockName    割り当てるUniformブロックの名前.
+* @param bindingPoint 割り当て先のバインディング・ポイント.
+*
+* @retval true  割り当て成功.
+* @retval false 割り当て失敗.
+*/
+bool Program::BindUniformBlock(const char* blockName, GLuint bindingPoint)
+{
+  const GLuint blockIndex = glGetUniformBlockIndex(id, blockName);
+  if (blockIndex == GL_INVALID_INDEX) {
+    std::cerr << "[エラー] Uniformブロック'" << blockName << "'が見つかりません\n";
+    return false;
+  }
+  glUniformBlockBinding(id, blockIndex, bindingPoint);
+  const GLenum result = glGetError();
+  if (result != GL_NO_ERROR) {
+    std::cerr << "[エラー] Uniformブロック'" << blockName << "'のバインドに失敗\n";
+    return false;
+  }
+  return true;
+}
+
+/**
+* ユニフォーム変数の位置を取得する.
+*
+* @param uniformName ユニフォーム変数の名前.
+*
+* @retval 0      名前がuniformNameと一致する変数が見つからない. またはシェーダーが無効.
+* @retval 1以上  名前がuniformNameと一致する変数の位置.
+*/
+GLint Program::GetUniformLocation(const char* uniformName) const
+{
+  if (id) {
+    return glGetUniformLocation(id, uniformName);
+  }
+  return 0;
+}
+
+/**
+* ユニフォーム変数にデータを設定する.
+*/
+void Program::SetUniformInt(GLint location, GLint value) const
+{
+  if (id) {
+    return glUniform1i(location, value);
+  }
+}
+
+/**
 * シングルトンインスタンスを取得する.
 *
 * @return Cacheのシングルトンインスタンス.
@@ -224,6 +275,25 @@ ProgramPtr Cache::Create(const char* vsPath, const char* fsPath)
   const ProgramPtr value = std::make_shared<Program>(vsPath, fsPath);
   map.insert(std::make_pair(key, value));
   return value;
+}
+
+/**
+* シェーダープログラムを取得する.
+*
+* @param vsPath 頂点シェーダーファイル名.
+* @param fsPath フラグメントシェーダーファイル名.
+*
+* @return vsPathとfsPathから作成されたシェーダープログラム.
+*         対応するエントリがない場合はnullptrを返す.
+*/
+ProgramPtr Cache::Get(const char* vsPath, const char* fsPath) const
+{
+  const std::string key = std::string(vsPath) + std::string(fsPath);
+  const auto itr = map.find(key);
+  if (itr != map.end()) {
+    return itr->second;
+  }
+  return ProgramPtr();
 }
 
 /**

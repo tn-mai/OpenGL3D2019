@@ -38,8 +38,21 @@ void main()
 {
   outColor = vColor;
   outTexCoord = vTexCoord;
-  mat4 matModel = mat4(transpose(vd.matModel[meshIndex]));
-  outNormal = mat3(vd.matNormal[meshIndex]) * vNormal;
-  outPosition = vec3(matModel * vec4(vPosition, 1.0));
-  gl_Position = matVP * matModel * vec4(vPosition, 1.0);
+  if (dot(vWeights, vWeights) != 0.0) {
+    mat3x4 matSkinTmp =
+      vd.matBones[int(vJoints.x)] * vWeights.x +
+      vd.matBones[int(vJoints.y)] * vWeights.y +
+      vd.matBones[int(vJoints.z)] * vWeights.z +
+      vd.matBones[int(vJoints.w)] * vWeights.w;
+	mat4 matSkin = mat4(transpose(matSkinTmp));
+	mat4 matModel = mat4(transpose(vd.matModel[meshIndex]));// * matSkin;
+    outNormal = mat3(vd.matNormal[meshIndex]) * mat3(matSkin) * vNormal;
+    outPosition = vec3(matModel * vec4(vPosition, 1.0));
+    gl_Position = matVP * matModel * vec4(vPosition, 1.0);
+  } else {
+	mat4 matModel = mat4(transpose(vd.matModel[meshIndex]));
+    outNormal = mat3(vd.matNormal[meshIndex]) * vNormal;
+    outPosition = vec3(matModel * vec4(vPosition, 1.0));
+    gl_Position = matVP * matModel * vec4(vPosition, 1.0);
+  }
 }

@@ -25,13 +25,22 @@ bool MainGameScene::Initialize()
   fontRenderer.Init(1000);
   fontRenderer.LoadFromFile("Res/font.fnt");
 
-  meshBuffer.Init(sizeof(Mesh::Vertex) * 1000000, sizeof(GLushort) * 3000000);
+  meshBuffer.Init(sizeof(Mesh::Vertex) * 1000000, sizeof(GLushort) * 3000000, sizeof(Mesh::UniformDataMeshMatrix) * 100);
   meshBuffer.CreateCircle("Circle", 8);
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain");
   texTerrain = std::make_shared<Texture::Image2D>("Res/ColorMap.tga");
+  meshBuffer.LoadMesh("Res/bikuni.gltf");
+  meshPlayer = meshBuffer.GetMesh("Bikuni");
+  meshPlayer->SetAnimation(0);
+  meshTerrain = meshBuffer.GetMesh("Terrain");
+  meshCircle = meshBuffer.GetMesh("Circle");
 
-  progMesh = Shader::Cache::Instance().Create("Res/Mesh.vert", "Res/Mesh.frag");
+  Shader::Cache& shaderCache = Shader::Cache::Instance();
+  progMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
+  progSkeletalMesh = shaderCache.Create("Res/SkeletalMesh.vert", "Res/SkeletalMesh.frag");
+  progSkeletalMesh->BindUniformBlock("MeshMatrixUniformData", 0);
+
   return true;
 }
 
@@ -79,6 +88,12 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
     dir = matRX * matRY * glm::vec4(dir, 1);
     dir = normalize(dir);
 
+    meshBuffer.ResetUniformData();
+    meshPlayer->Update(deltaTime);
+    meshTerrain->Update(deltaTime);
+    meshCircle->Update(deltaTime);
+    meshBuffer.UploadUniformData();
+
     // ƒV[ƒ“Ø‚è‘Ö‚¦.
     const GamePad gamepad = window.GetGamePad();
     if (gamepad.buttonDown & GamePad::X) {
@@ -96,21 +111,42 @@ void MainGameScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
 
-  meshBuffer.Bind();
-  progMesh->Use();
-
   const glm::mat4 matView = glm::lookAt(pos, pos + dir, glm::vec3(0, 1, 0));
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
   const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
-  progMesh->SetViewProjectionMatrix(matProj * matView * matModel);
 
-  texTerrain->Bind(0);
-  meshBuffer.GetMesh("Terrain").Draw();
-  meshBuffer.GetMesh("Circle").Draw();
+  meshBuffer.Bind();
+
+  {
+    progMesh->Use();
+
+    progMesh->SetViewProjectionMatrix(matProj * matView * matModel);
+    texTerrain->Bind(0);
+    const GLint locMeshIndex = progMesh->GetUniformLocation("meshIndex");
+    if (locMeshIndex > 0) {
+      progMesh->SetUniformInt(locMeshIndex, 0);
+    }
+    meshBuffer.GetMesh("Terrain")->Draw();
+    meshBuffer.GetMesh("Circle")->Draw();
+
+    progMesh->Unuse();
+  }
+
+  {
+    progSkeletalMesh->Use();
+
+    progSkeletalMesh->SetViewProjectionMatrix(matProj * matView * glm::scale(glm::mat4(1), glm::vec3(10)));
+    const GLint locMeshIndex = progSkeletalMesh->GetUniformLocation("meshIndex");
+    if (locMeshIndex > 0) {
+      progSkeletalMesh->SetUniformInt(locMeshIndex, 0);
+    }
+    meshPlayer->Draw();
+
+    progSkeletalMesh->Unuse();
+  }
+
   texTerrain->Unbind(0);
-
-  progMesh->Unuse();
   meshBuffer.Unbind();
 
   const glm::vec2 screenSize(window.Width(), window.Height());
