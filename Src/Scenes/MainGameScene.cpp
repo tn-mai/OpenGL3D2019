@@ -95,6 +95,13 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
       meshPlayer->translation.y = heightMap.Height(meshPlayer->translation);
       move = glm::normalize(move);
       meshPlayer->rotation = glm::quat(glm::vec3(0, std::atan2(-move.z, move.x) + glm::radians(90.0f), 0));
+      if (meshPlayer->GetAnimation() != 0) {
+        meshPlayer->SetAnimation(0);
+      }
+    } else {
+      if (meshPlayer->GetAnimation() != 1) {
+        meshPlayer->SetAnimation(1);
+      }
     }
 
     const glm::vec2 currentMousePos = GLFWEW::Window::Instance().MousePosition();
@@ -134,8 +141,8 @@ void MainGameScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
 
-  const glm::vec3 cameraPos = meshPlayer->translation + glm::vec3(0, 30, 15);
-  const glm::mat4 matView = glm::lookAt(cameraPos, meshPlayer->translation, glm::vec3(0, 1, 0));
+  const glm::vec3 cameraPos = meshPlayer->translation + glm::vec3(0, 15, 7.5f);
+  const glm::mat4 matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::vec3(0, 1.25f, 0), glm::vec3(0, 1, 0));
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
   const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
