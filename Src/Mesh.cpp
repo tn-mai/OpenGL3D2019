@@ -21,8 +21,20 @@ void Mesh::SetAnimation(int animationId)
   if (file) {
     if (animationId >= 0 && animationId < static_cast<int>(file->animations.size())) {
       animation = &file->animations[animationId];
+      frame = 0;
     }
   }
+}
+
+/**
+*
+*/
+int Mesh::GetAnimation() const
+{
+  if (!file) {
+    return 0;
+  }
+  return animation - &file->animations[0];
 }
 
 /**

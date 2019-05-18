@@ -159,6 +159,7 @@ struct Mesh
   void Draw() const;
   void Update(float deltaTime);
   void SetAnimation(int);
+  int GetAnimation() const;
   size_t GetAnimationCount() const;
   MeshTransformation CalculateTransform() const;
 
