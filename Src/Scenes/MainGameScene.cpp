@@ -29,7 +29,7 @@ bool MainGameScene::Initialize()
   meshBuffer.CreateCircle("Circle", 8);
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain");
-  texTerrain = std::make_shared<Texture::Image2D>("Res/ColorMap.tga");
+  texTerrain = Texture::Image2D::Create("Res/ColorMap.tga");
   meshBuffer.LoadMesh("Res/bikuni.gltf");
   meshPlayer = meshBuffer.GetMesh("Bikuni");
   meshPlayer->SetAnimation(0);

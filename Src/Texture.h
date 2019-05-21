@@ -9,6 +9,9 @@
 
 namespace Texture {
 
+class Image2D;
+using Image2DPtr = std::shared_ptr<Image2D>;
+
 struct ImageData {
   GLint width;
   GLint height;
@@ -27,8 +30,8 @@ bool LoadImage2D(const char* path, ImageData& imageData);
 class Image2D
 {
 public:
-  Image2D() = default;
-  explicit Image2D(const char*);
+  static Image2DPtr Create(const char*);
+
   ~Image2D();
   bool IsNull() const;
   GLint Width() const { return width; }
@@ -39,12 +42,14 @@ public:
   void Unbind(int no) const;
 
 private:
+  Image2D() = default;
+  explicit Image2D(const char*);
+
   GLuint id = 0;
   GLint width = 0;
   GLint height = 0;
   bool isCubemap = false;
 };
-using Image2DPtr = std::shared_ptr<Image2D>;
 
 } // namespace Texture
 

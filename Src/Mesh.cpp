@@ -962,7 +962,7 @@ bool Buffer::LoadMesh(const char* path)
         const json11::Json& imageUri = json["images"][imageSourceId]["uri"];
         if (imageUri.is_string()) {
           const std::string str = std::string("Res/") + imageUri.string_value();
-          m.texture = std::make_shared<Texture::Image2D>(str.c_str());
+          m.texture = Texture::Image2D::Create(str.c_str());
         }
       }
       const std::vector<json11::Json>& baseColorFactor = material["pbrMetallicRoughness"]["baseColorFactor"].array_items();

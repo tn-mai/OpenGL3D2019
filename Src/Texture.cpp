@@ -631,4 +631,17 @@ void Image2D::Unbind(int no) const
   glBindTexture(Target(), 0);
 }
 
+/**
+* 2Dテクスチャを作成する.
+*
+* @param path テクスチャファイル名.
+*/
+Image2DPtr Image2D::Create(const char* path)
+{
+  struct Impl : Image2D {
+    Impl(const char* path) : Image2D(path) {}
+  };
+  return std::make_shared<Impl>(path);
+}
+
 } // namespace Texture

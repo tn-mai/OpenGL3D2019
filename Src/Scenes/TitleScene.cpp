@@ -24,7 +24,8 @@ bool TitleScene::Initialize()
   spriteRenderer.Init(1000, "Res/Sprite.vert", "Res/Sprite.frag");
   fontRenderer.Init(1000);
   fontRenderer.LoadFromFile("Res/font.fnt");
-  Sprite spr(std::make_shared<Texture::Image2D>("Res/Title.tga"));
+  Sprite spr(Texture::Image2D::Create("Res/TitleBg.tga"));
+  spr.Scale(glm::vec2(2));
   sprites.push_back(spr);
   return true;
 }
@@ -46,7 +47,7 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
   fontRenderer.Scale(glm::vec2(1));
   fontRenderer.AddString(glm::vec2(-600, 320), L"タイトル画面");
   fontRenderer.Scale(glm::vec2(4));
-  fontRenderer.AddString(glm::vec2(-400, 0), L"アクションゲーム");
+  fontRenderer.AddString(glm::vec2(-300, 0), L"比丘尼遊行録");
   fontRenderer.EndUpdate();
 
   // シーン切り替え.

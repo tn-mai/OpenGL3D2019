@@ -112,7 +112,7 @@ bool Renderer::LoadFromFile(const char* filename)
   texList.clear();
   texList.reserve(texNameList.size());
   for (const auto& e : texNameList) {
-    Texture::Image2DPtr tex = std::make_shared<Texture::Image2D>(e.c_str());
+    Texture::Image2DPtr tex = Texture::Image2D::Create(e.c_str());
     if (!tex) {
       return false;
     }
