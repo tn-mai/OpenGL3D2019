@@ -3,19 +3,8 @@
 */
 #include "Sprite.h"
 #include <vector>
-#include <algorithm>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
-
-/**
-* 頂点データ型.
-*/
-struct Vertex
-{
-  glm::vec3 position; ///< 座標
-  glm::vec4 color; ///< 色
-  glm::vec2 texCoord; ///< テクスチャ座標
-};
 
 /**
 * Spriteコンストラクタ.
@@ -67,9 +56,6 @@ bool SpriteRenderer::Init(size_t maxSpriteCount, const char* vsPath, const char*
   vao.Unbind();
   program = Shader::Cache::Instance().Create(vsPath, fsPath);
 
-  vboUsed = 0;
-  pVBO = nullptr;
-
   drawDataList.reserve(128);
 
   if (!vbo.Id() || !ibo.Id() || !vao.Id() || program->IsNull()) {
@@ -83,10 +69,9 @@ bool SpriteRenderer::Init(size_t maxSpriteCount, const char* vsPath, const char*
 */
 void SpriteRenderer::BeginUpdate()
 {
-  glBindBuffer(GL_ARRAY_BUFFER, vbo.Id());
-  pVBO = static_cast<Vertex*>(glMapBufferRange(GL_ARRAY_BUFFER, 0, vbo.Size(), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
-  vboUsed = 0;
-  ClearDrawData();
+  drawDataList.clear();
+  vertices.clear();
+  vertices.reserve(vbo.Size() / sizeof(Vertex));
 }
 
 /**
@@ -99,7 +84,8 @@ void SpriteRenderer::BeginUpdate()
 */
 bool SpriteRenderer::AddVertices(const Sprite& sprite)
 {
-  if (!pVBO || vboUsed >= vbo.Size()) {
+  if (vertices.size() * sizeof(Vertex) >= static_cast<size_t>(vbo.Size())) {
+    std::cerr << "[警告] " << __func__ << "VBOが満杯です\n";
     return false;
   }
   const Texture::Image2DPtr& texture = sprite.Texture();
@@ -115,24 +101,25 @@ bool SpriteRenderer::AddVertices(const Sprite& sprite)
   const glm::mat4 matS = glm::scale(glm::mat4(1), glm::vec3(sprite.Scale(), 1));
   const glm::mat4 transform = matT * matR * matS;
 
-  pVBO[0].position = transform * glm::vec4(-halfSize.x, -halfSize.y, 0, 1);
-  pVBO[0].color = sprite.Color();
-  pVBO[0].texCoord = rect.origin;
+  Vertex v[4];
 
-  pVBO[1].position = transform * glm::vec4(halfSize.x, -halfSize.y, 0, 1);
-  pVBO[1].color = sprite.Color();
-  pVBO[1].texCoord = glm::vec2(rect.origin.x + rect.size.x, rect.origin.y);
+  v[0].position = transform * glm::vec4(-halfSize.x, -halfSize.y, 0, 1);
+  v[0].color = sprite.Color();
+  v[0].texCoord = rect.origin;
 
-  pVBO[2].position = transform * glm::vec4(halfSize.x, halfSize.y, 0, 1);
-  pVBO[2].color = sprite.Color();
-  pVBO[2].texCoord = rect.origin + rect.size;
+  v[1].position = transform * glm::vec4(halfSize.x, -halfSize.y, 0, 1);
+  v[1].color = sprite.Color();
+  v[1].texCoord = glm::vec2(rect.origin.x + rect.size.x, rect.origin.y);
 
-  pVBO[3].position = transform * glm::vec4(-halfSize.x, halfSize.y, 0, 1);
-  pVBO[3].color = sprite.Color();
-  pVBO[3].texCoord = glm::vec2(rect.origin.x, rect.origin.y + rect.size.y);
+  v[2].position = transform * glm::vec4(halfSize.x, halfSize.y, 0, 1);
+  v[2].color = sprite.Color();
+  v[2].texCoord = rect.origin + rect.size;
 
-  pVBO += 4;
-  vboUsed += sizeof(Vertex) * 4;
+  v[3].position = transform * glm::vec4(-halfSize.x, halfSize.y, 0, 1);
+  v[3].color = sprite.Color();
+  v[3].texCoord = glm::vec2(rect.origin.x, rect.origin.y + rect.size.y);
+
+  vertices.insert(vertices.end(), v, v + 4);
 
   if (drawDataList.empty()) {
     drawDataList.push_back({ 6, 0, texture });
@@ -153,9 +140,9 @@ bool SpriteRenderer::AddVertices(const Sprite& sprite)
 */
 void SpriteRenderer::EndUpdate()
 {
-  glUnmapBuffer(GL_ARRAY_BUFFER);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  pVBO = nullptr;
+  vbo.BufferSubData(0, vertices.size() * sizeof(Vertex), vertices.data());
+  vertices.clear();
+  vertices.shrink_to_fit();
 }
 
 /**

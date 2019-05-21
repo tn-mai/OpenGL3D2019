@@ -77,8 +77,12 @@ private:
   VertexArrayObject vao;
   Shader::ProgramPtr program;
 
-  GLsizei vboUsed = 0;            ///< VBOに格納されている頂点数.
-  struct Vertex* pVBO = nullptr;  ///< VBOへのポインタ.
+  struct Vertex {
+    glm::vec3 position; ///< 座標
+    glm::vec4 color; ///< 色
+    glm::vec2 texCoord; ///< テクスチャ座標
+  };
+  std::vector<Vertex> vertices;
 
   struct DrawData {
     size_t count;
