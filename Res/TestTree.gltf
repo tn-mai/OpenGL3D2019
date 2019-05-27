@@ -1,0 +1,218 @@
+{
+    "asset" : {
+        "version" : "2.0",
+        "generator" : "Khronos glTF Blender I/O v0.9.11"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                3,
+                4,
+                5
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "name" : "Camera.001",
+            "rotation" : [
+                0.483536034822464,
+                0.33687159419059753,
+                -0.20870360732078552,
+                0.7804827094078064
+            ],
+            "translation" : [
+                7.481131553649902,
+                5.34366512298584,
+                6.5076398849487305
+            ]
+        },
+        {
+            "name" : "Lamp.001",
+            "rotation" : [
+                0.16907575726509094,
+                0.7558802962303162,
+                -0.27217137813568115,
+                0.570947527885437
+            ],
+            "translation" : [
+                4.076245307922363,
+                5.903861999511719,
+                -1.0054539442062378
+            ]
+        },
+        {
+            "name" : "tree",
+            "mesh" : 0
+        },
+        {
+            "name" : "TestTree.gltf",
+            "children" : [
+                0,
+                1,
+                2
+            ]
+        },
+        {
+            "name" : "Lamp",
+            "rotation" : [
+                0.16907575726509094,
+                0.7558803558349609,
+                -0.27217137813568115,
+                0.570947527885437
+            ],
+            "translation" : [
+                4.076245307922363,
+                5.903861999511719,
+                -1.0054539442062378
+            ]
+        },
+        {
+            "name" : "Camera",
+            "rotation" : [
+                0.483536034822464,
+                0.33687159419059753,
+                -0.20870360732078552,
+                0.7804827094078064
+            ],
+            "translation" : [
+                7.481131553649902,
+                5.34366512298584,
+                6.5076398849487305
+            ]
+        }
+    ],
+    "materials" : [
+        {
+            "pbrMetallicRoughness" : {
+                "baseColorFactor" : [
+                    0.800000011920929,
+                    0.800000011920929,
+                    0.800000011920929,
+                    1
+                ],
+                "roughnessFactor" : 1,
+                "metallicFactor" : 1
+            },
+            "name" : "glTF Default Material"
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "TestTree",
+            "primitives" : [
+                {
+                    "material" : 0,
+                    "indices" : 6,
+                    "attributes" : {
+                        "TEXCOORD_0" : 0,
+                        "JOINTS_0" : 1,
+                        "POSITION" : 2,
+                        "NORMAL" : 3,
+                        "WEIGHTS_0" : 4,
+                        "TANGENT" : 5
+                    }
+                }
+            ]
+        }
+    ],
+    "accessors" : [
+        {
+            "count" : 869,
+            "type" : "VEC2",
+            "componentType" : 5126,
+            "bufferView" : 0
+        },
+        {
+            "count" : 869,
+            "type" : "VEC4",
+            "componentType" : 5123,
+            "bufferView" : 1
+        },
+        {
+            "type" : "VEC3",
+            "max" : [
+                2.0095555782318115,
+                7.708204746246338,
+                2.3750438690185547
+            ],
+            "componentType" : 5126,
+            "bufferView" : 2,
+            "min" : [
+                -2.3467559814453125,
+                -2.901747620853712e-06,
+                -2.3686091899871826
+            ],
+            "count" : 869
+        },
+        {
+            "count" : 869,
+            "type" : "VEC3",
+            "componentType" : 5126,
+            "bufferView" : 3
+        },
+        {
+            "count" : 869,
+            "type" : "VEC4",
+            "componentType" : 5126,
+            "bufferView" : 4
+        },
+        {
+            "count" : 869,
+            "type" : "VEC4",
+            "componentType" : 5126,
+            "bufferView" : 5
+        },
+        {
+            "count" : 2280,
+            "type" : "SCALAR",
+            "componentType" : 5123,
+            "bufferView" : 6
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 6952,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 6952,
+            "byteOffset" : 6952
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 10428,
+            "byteOffset" : 13904
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 10428,
+            "byteOffset" : 24332
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 13904,
+            "byteOffset" : 34760
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 13904,
+            "byteOffset" : 48664
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 4560,
+            "byteOffset" : 62568
+        }
+    ],
+    "buffers" : [
+        {
+            "uri" : "TestTree.bin",
+            "byteLength" : 67128
+        }
+    ]
+}
