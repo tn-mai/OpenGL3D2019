@@ -22,8 +22,7 @@ namespace Font {
 */
 bool Renderer::Init(size_t maxChar)
 {
-  spriteRenderer.Init(maxChar, "Res/Font.vert", "Res/Font.frag");
-  return true;
+  return spriteRenderer.Init(maxChar, "Res/Font.vert", "Res/Font.frag");
 }
 
 /**
@@ -36,42 +35,49 @@ bool Renderer::Init(size_t maxChar)
 */
 bool Renderer::LoadFromFile(const char* filename)
 {
-  const std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(filename, "r"), fclose);
+  const std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(filename, "r"), &fclose);
   if (!fp) {
     return false;
   }
 
   int line = 1;
-  int ret = fscanf(fp.get(), "info face=%*s size=%f bold=%*d italic=%*d charset=%*s"
-    " unicode=%*d stretchH=%*d smooth=%*d aa=%*d padding=%*d,%*d,%*d,%*d spacing=%*d,%*d", &baseFontSize);
-  ++line;
-
-  glm::vec2 scale;
-  ret = fscanf(fp.get(), " common lineHeight=%*d base=%*d scaleW=%f scaleH=%f pages=%*d packed=%*d", &scale.x, &scale.y);
-  if (ret < 2) {
+  int ret = fscanf(fp.get(), "info face=\"%*[^\"]\" size=%f bold=%*d italic=%*d charset=%*s"
+    " unicode=%*d stretchH=%*d smooth=%*d aa=%*d padding=%f,%f,%f,%f spacing=%f,%f%*[^\n]",
+    &baseFontSize, &padding[0], &padding[1], &padding[2], &padding[3],
+    &spacing[0], &spacing[1]);
+  if (ret < 7) {
     std::cerr << "ERROR: " << filename << "の読み込みに失敗(line=" << line << ")\n";
     return false;
   }
-  const glm::vec2 reciprocalScale = glm::vec2(1.0f / scale);
   ++line;
+
+  glm::vec2 scale;
+  ret = fscanf(fp.get(), " common lineHeight=%f base=%f scaleW=%f scaleH=%f pages=%*d packed=%*d%*[^\n]",
+    &lineHeight, &base, &scale.x, &scale.y);
+  if (ret < 4) {
+    std::cerr << "ERROR: " << filename << "の読み込みに失敗(line=" << line << ")\n";
+    return false;
+  }
+  ++line;
+
+  // 位置情報ファイルのパス部分を取り出す.
+  std::string basePath = filename;
+  const size_t lastSlashIndex = basePath.find_last_of('/', std::string::npos);
+  if (lastSlashIndex == std::string::npos) {
+    basePath.clear();
+  } else {
+    basePath.resize(lastSlashIndex + 1);
+  }
 
   std::vector<std::string> texNameList;
   for (;;) {
-    char tex[128];
-    ret = fscanf(fp.get(), " page id=%*d file=%127s", tex);
+    char tex[256];
+    ret = fscanf(fp.get(), " page id=%*d file=\"%255[^\"]\"", tex);
     if (ret < 1) {
       break;
     }
-    std::string texFilename = filename;
-    const size_t lastSlashIndex = texFilename.find_last_of('/', std::string::npos);
-    if (lastSlashIndex == std::string::npos) {
-      texFilename.clear();
-    } else {
-      texFilename.resize(lastSlashIndex + 1);
-    }
-    texFilename.append(tex + 1); // 最初の「"」を抜いて追加.
-    texFilename.pop_back(); // 最後の「"」を消す.
-    texNameList.push_back(texFilename);
+    tex[255] = '\0';
+    texNameList.push_back(basePath + tex);
     ++line;
   }
   if (texNameList.empty()) {
@@ -88,18 +94,19 @@ bool Renderer::LoadFromFile(const char* filename)
   ++line;
 
   fixedAdvance = 0;
+  fontList.clear();
   fontList.resize(65536);
   for (int i = 0; i < charCount; ++i) {
     FontInfo font;
-    glm::vec2 uv;
-    ret = fscanf(fp.get(), " char id=%d x=%f y=%f width=%f height=%f xoffset=%f yoffset=%f xadvance=%f page=%*d chnl=%*d", &font.id, &uv.x, &uv.y, &font.size.x, &font.size.y, &font.offset.x, &font.offset.y, &font.xadvance);
-    if (ret < 8) {
+    ret = fscanf(fp.get(), " char id=%d x=%f y=%f width=%f height=%f xoffset=%f yoffset=%f xadvance=%f page=%d chnl=%*d",
+      &font.id, &font.uv.x, &font.uv.y, &font.size.x, &font.size.y, &font.offset.x, &font.offset.y, &font.xadvance, &font.page);
+    if (ret < 9) {
       std::cerr << "ERROR: " << filename << "の読み込みに失敗(line=" << line << ")\n";
       return false;
     }
-    uv.y = scale.y - uv.y - font.size.y; // フォントファイルは左上が原点なので、OpenGLの座標系(左下が原点)に変換.
-    font.uv = uv;;
-    if (font.id < 65536) {
+    // フォントファイルは左上が原点なので、OpenGLの座標系(左下が原点)に変換.
+    font.uv.y = scale.y - font.uv.y - font.size.y;
+    if (font.id >= 0 && font.id < static_cast<int>(fontList.size())) {
       fontList[font.id] = font;
       if (font.xadvance > fixedAdvance) {
         fixedAdvance = font.xadvance;
@@ -153,15 +160,17 @@ const glm::vec4& Renderer::Color() const
 bool Renderer::AddString(const glm::vec2& position, const wchar_t* str)
 {
   glm::vec2 pos = position;
-  Sprite sprite(texList.front());
   for (const wchar_t* itr = str; *itr; ++itr) {
     const FontInfo& font = fontList[*itr];
     if (font.id >= 0 && font.size.x && font.size.y) {
-      const glm::vec2 baseOffset = (font.size - baseFontSize) * 0.5f * scale;
-      glm::vec3 offsetedPos = glm::vec3(pos + baseOffset + font.offset * scale, 0);
+      // スプライトの座標は画像の中心を指定するが、フォントは左上を指定するので、その差を打ち消すための補正値を計算する.
+      const float baseX = font.size.x * 0.5f + font.offset.x;
+      const float baseY = base - font.size.y * 0.5f - font.offset.y;
+      glm::vec3 offsetedPos = glm::vec3(pos + glm::vec2(baseX, baseY) * scale, 0);
       if (!propotional) {
         offsetedPos.x = pos.x;
       }
+      Sprite sprite(texList[font.page]);
       sprite.Position(offsetedPos);
       sprite.Rectangle({ font.uv, font.size });
       sprite.Scale(scale);
