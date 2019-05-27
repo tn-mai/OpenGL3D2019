@@ -29,10 +29,12 @@ private:
   Mesh::MeshPtr meshPlayer;
   Mesh::MeshPtr meshTerrain;
   Mesh::MeshPtr meshCircle;
+  std::vector<Mesh::MeshPtr> meshTrees;
   Shader::ProgramPtr progMesh;
   Shader::ProgramPtr progSkeletalMesh;
   Terrain::HeightMap heightMap;
   Texture::Image2DPtr texTerrain;
+  Texture::Image2DPtr texTree;
   glm::vec3 pos = glm::vec3(0, 10, 10);
   glm::vec3 dir = glm::vec3(0, 0, -1);
   glm::vec2 prevMousePos = glm::vec2(0, 0);

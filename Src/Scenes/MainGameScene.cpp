@@ -6,6 +6,20 @@
 #include "GameOverScene.h"
 #include "../GLFWEW.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <random>
+#include <sstream>
+#include <iomanip>
+
+/*
+  メッセージモードの開始 begin ラベル
+  msg テキスト
+  select 選択肢
+  set 変数番号 数値or変数番号
+  add 変数番号 数値or変数番号
+  sub 変数番号 数値or変数番号
+  if 変数番号(が0でなければ) ジャンプ先ラベル
+  メッセージモードの終了 end
+*/
 
 /**
 * コンストラクタ.
@@ -30,11 +44,30 @@ bool MainGameScene::Initialize()
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain");
   texTerrain = Texture::Image2D::Create("Res/ColorMap.tga");
+  texTree = Texture::Image2D::Create("Res/TestTree.tga");
   meshBuffer.LoadMesh("Res/bikuni.gltf");
+  meshBuffer.LoadMesh("Res/TestTree.gltf");
   meshPlayer = meshBuffer.GetMesh("Bikuni");
   meshPlayer->SetAnimation(0);
   meshTerrain = meshBuffer.GetMesh("Terrain");
   meshCircle = meshBuffer.GetMesh("Circle");
+
+  static const size_t treeCount = 200;
+  meshTrees.reserve(treeCount);
+  std::mt19937 rand;
+  rand.seed(0);
+  for (size_t i = 0; i < treeCount; ++i) {
+    Mesh::MeshPtr p = meshBuffer.GetMesh("TestTree");
+    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(0, heightMap.Size().x)(rand));
+    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(0, heightMap.Size().y)(rand));
+    p->translation.y = heightMap.Height(p->translation);
+    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::half_pi<float>())(rand), glm::vec3(0, 1, 0));
+    p->scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
+    p->scale = glm::clamp(p->scale, 0.4f, 1.2f);
+    p->SetAnimation(0);
+    p->frame = std::uniform_real_distribution<float>(0, 2)(rand);
+    meshTrees.push_back(p);
+  }
 
   Shader::Cache& shaderCache = Shader::Cache::Instance();
   progMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
@@ -70,15 +103,18 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
 
   fontRenderer.BeginUpdate();
   if (IsActive()) {
-    fontRenderer.AddString(glm::vec2(-600, 320), L"メインゲーム画面");
+    std::wstringstream wss;
+    wss << L"FPS:" << std::fixed << std::setprecision(2) << window.Fps();
+    fontRenderer.AddString(glm::vec2(-600, 300), wss.str().c_str());
+    fontRenderer.AddString(glm::vec2(-600, 260), L"メインゲーム画面");
   }
   fontRenderer.EndUpdate();
 
   if (IsActive()) {
-    const glm::vec3 dir(0, 0, -1);
-    const glm::vec3 left = glm::normalize(glm::cross(glm::vec3(0, 1, 0), dir));
+    const glm::aligned_vec3 dir(0, 0, -1);
+    const glm::aligned_vec3 left = glm::normalize(glm::cross(glm::aligned_vec3(0, 1, 0), dir));
     const float dt = static_cast<float>(window.DeltaTime());
-    glm::vec3 move(0);
+    glm::aligned_vec3 move(0);
     const float speed = 5.0f;
     if (window.KeyPressed(GLFW_KEY_W)) {
       move += dir * dt * speed;
@@ -94,7 +130,7 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
       meshPlayer->translation += move;
       meshPlayer->translation.y = heightMap.Height(meshPlayer->translation);
       move = glm::normalize(move);
-      meshPlayer->rotation = glm::quat(glm::vec3(0, std::atan2(-move.z, move.x) + glm::radians(90.0f), 0));
+      meshPlayer->rotation = glm::aligned_quat(glm::vec3(0, std::atan2(-move.z, move.x) + glm::radians(90.0f), 0));
       if (meshPlayer->GetAnimation() != 0) {
         meshPlayer->SetAnimation(0);
       }
@@ -109,11 +145,11 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
     prevMousePos = currentMousePos;
     glm::mat4 matRX(1);
     if (mouseMove.x) {
-      matRX = glm::rotate(glm::mat4(1), -mouseMove.x / 100.0f, glm::vec3(0, 1, 0));
+      matRX = glm::rotate(glm::aligned_mat4(1), -mouseMove.x / 100.0f, glm::aligned_vec3(0, 1, 0));
     }
     glm::mat4 matRY(1);
     if (mouseMove.y) {
-      matRY = glm::rotate(glm::mat4(1), mouseMove.y / 100.0f, left);
+      matRY = glm::rotate(glm::aligned_mat4(1), mouseMove.y / 100.0f, left);
     }
     //dir = matRX * matRY * glm::vec4(dir, 1);
     //dir = normalize(dir);
@@ -122,6 +158,9 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
     meshPlayer->Update(deltaTime);
     meshTerrain->Update(deltaTime);
     meshCircle->Update(deltaTime);
+    for (auto& e : meshTrees) {
+      e->Update(deltaTime * 0.25f);
+    }
     meshBuffer.UploadUniformData();
 
     // シーン切り替え.
@@ -141,8 +180,9 @@ void MainGameScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
 
-  const glm::vec3 cameraPos = meshPlayer->translation + glm::vec3(0, 15, 7.5f);
-  const glm::mat4 matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::vec3(0, 1.25f, 0), glm::vec3(0, 1, 0));
+  const bool pushSpaceBar = window.KeyPressed(GLFW_KEY_SPACE);
+  const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, pushSpaceBar ? 100 : 15, 7.5f);
+  const glm::mat4 matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::aligned_vec3(0, 1.25f, 0), glm::aligned_vec3(0, 1, 0));
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
   const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
@@ -160,6 +200,11 @@ void MainGameScene::Render()
     }
     meshTerrain->Draw();
     meshCircle->Draw();
+
+    texTree->Bind(0);
+    for (const auto& e : meshTrees) {
+      e->Draw();
+    }
 
     progMesh->Unuse();
   }
