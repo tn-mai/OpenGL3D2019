@@ -38,6 +38,11 @@ bool TitleScene::Initialize()
 */
 void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
 {
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  const float w = window.Width();
+  const float h = window.Height();
+  const float lh = fontRenderer.LineHeight();
+
   spriteRenderer.BeginUpdate();
   for (const auto& e : sprites) {
     spriteRenderer.AddVertices(e);
@@ -45,13 +50,12 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
   spriteRenderer.EndUpdate();
   fontRenderer.BeginUpdate();
   fontRenderer.Scale(glm::vec2(1));
-  fontRenderer.AddString(glm::vec2(-600, 320), L"タイトル画面");
+  fontRenderer.AddString(glm::vec2(-w * 0.5f + 32, h * 0.5f - lh), L"タイトル画面");
   fontRenderer.Scale(glm::vec2(4));
   fontRenderer.AddString(glm::vec2(-300, 0), L"比丘尼遊行録");
   fontRenderer.EndUpdate();
 
   // シーン切り替え.
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
   if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
     sceneStack.Replace(std::make_shared<MainGameScene>());
   }
