@@ -7,6 +7,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <array>
+#include <deque>
 #include <glm/vec2.hpp>
 
 /**
@@ -55,6 +56,8 @@ public:
   void DisableMouseCursor();
   void EnableMouseCursor();
 
+  double Fps() const { return fps; }
+
 private:
   Window() = default;
   ~Window();
@@ -78,6 +81,10 @@ private:
   };
   std::array<KeyState, GLFW_KEY_LAST + 1> keyState = { KeyState::release };
 
+  std::deque<double> fpsTickList;
+  double fpsTickSum = 0;
+  double fpsPrevTime = 0;
+  double fps = 0.0001;
 };
 
 } // namespace GLFWEW

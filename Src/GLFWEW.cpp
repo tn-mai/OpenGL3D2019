@@ -147,6 +147,23 @@ void Window::Update()
     deltaTime = 1.0 / 60.0;
   }
   prevTime = t;
+
+  static const size_t sampleCount = 100;
+  if (fpsTickList.empty()) {
+    fpsTickList.push_back(0);
+  } else {
+    if (fpsTickList.size() >= sampleCount) {
+      fpsTickSum -= fpsTickList.front();
+      fpsTickList.pop_front();
+    }
+    const double delta = t - fpsPrevTime;
+    if (delta < (120.0 / fps)) { // ŠÔŠu‚ª’·‚·‚¬‚éê‡‚Í—áŠO‚Æ‚µ‚ÄŠü‹p.
+      fpsTickList.push_back(delta);
+      fpsTickSum += delta;
+      fps = fpsTickList.size() / fpsTickSum;
+    }
+  }
+  fpsPrevTime = t;
 }
 
 /**
