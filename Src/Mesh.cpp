@@ -61,14 +61,14 @@ void GetMeshNodeList(const Node* node, std::vector<const Node*>& list)
 /**
 *
 */
-glm::mat4 DecomposeRotation(const glm::mat4& m)
+glm::aligned_mat4 DecomposeRotation(const glm::aligned_mat4& m)
 {
-  glm::vec3 scale;
-  scale.x = 1.0f / glm::length(glm::vec3(m[0]));
-  scale.y = 1.0f / glm::length(glm::vec3(m[1]));
-  scale.z = 1.0f / glm::length(glm::vec3(m[2]));
+  glm::aligned_vec3 scale;
+  scale.x = 1.0f / glm::length(glm::aligned_vec3(m[0]));
+  scale.y = 1.0f / glm::length(glm::aligned_vec3(m[1]));
+  scale.z = 1.0f / glm::length(glm::aligned_vec3(m[2]));
 
-  return glm::mat3(glm::scale(m, scale));
+  return glm::aligned_mat3(glm::scale(m, scale));
 }
 
 /**
@@ -111,11 +111,11 @@ glm::quat Interporation(const Timeline<glm::quat>& data, float frame)
 
 struct AnimatedNodeTree {
   struct Transformation {
-    glm::vec3 translation = glm::vec3(0);
-    glm::quat rotation = glm::quat(0, 0, 0, 1);
-    glm::vec3 scale = glm::vec3(1);
-    glm::mat4 matLocal = glm::mat4(1);
-    glm::mat4 matGlobal = glm::mat4(1);
+    glm::aligned_vec3 translation = glm::aligned_vec3(0);
+    glm::aligned_quat rotation = glm::aligned_quat(0, 0, 0, 1);
+    glm::aligned_vec3 scale = glm::aligned_vec3(1);
+    glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
+    glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
     bool isCalculated = false;
     bool hasTransformation = false;
   };
@@ -138,12 +138,12 @@ void CalcGlobalTransform(const std::vector<Node>& nodes, const Node& node, Anima
     const int parentNodeId = node.parent - &nodes[0];
     transformation.matLocal = animated.nodeTransformations[parentNodeId].matLocal;
   } else {
-    transformation.matLocal = glm::mat4(1);
+    transformation.matLocal = glm::aligned_mat4(1);
   }
   if (transformation.hasTransformation) {
-    const glm::mat4 T = glm::translate(glm::mat4(1), transformation.translation);
-    const glm::mat4 R = glm::mat4_cast(transformation.rotation);
-    const glm::mat4 S = glm::scale(glm::mat4(1), transformation.scale);
+    const glm::aligned_mat4 T = glm::translate(glm::aligned_mat4(1), transformation.translation);
+    const glm::aligned_mat4 R = glm::mat4_cast(transformation.rotation);
+    const glm::aligned_mat4 S = glm::scale(glm::aligned_mat4(1), transformation.scale);
     transformation.matLocal *= T * R * S;
   } else {
     transformation.matLocal *= node.matLocal;
@@ -238,6 +238,10 @@ MeshTransformation Mesh::CalculateTransform() const
 */
 void Mesh::Update(float deltaTime)
 {
+  if (!parent) {
+    return;
+  }
+
   if (animation) {
     frame += deltaTime;
     if (frame >= animation->totalTime) {
@@ -253,10 +257,10 @@ void Mesh::Update(float deltaTime)
   for (size_t i = 0; i < mt.transformations.size(); ++i) {
     uboData.matBones[i] = glm::transpose(mt.transformations[i]);
   }
-  const glm::mat4 matT = glm::translate(glm::mat4(1), translation);
-  const glm::mat4 matR = glm::mat4_cast(rotation);
-  const glm::mat4 matS = glm::scale(glm::mat4(1), scale);
-  const glm::mat4 matTRS = matT * matR * matS;
+  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
+  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
+  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
+  const glm::aligned_mat4 matTRS = matT * matR * matS;
   for (size_t i = 0; i < mt.matRoot.size(); ++i) {
     uboData.matModel[i] = glm::transpose(matTRS * mt.matRoot[i]);
     uboData.matNormal[i] = matR * DecomposeRotation(mt.matRoot[i]);
@@ -265,7 +269,7 @@ void Mesh::Update(float deltaTime)
     uboData.matModel[0] = glm::transpose(matTRS);
     uboData.matNormal[0] = matR;
   }
-  uboSize = sizeof(glm::vec4) + sizeof(glm::mat3x4) * 8 + sizeof(glm::mat3x4) * mt.transformations.size();
+  uboSize = sizeof(glm::aligned_vec4) + sizeof(glm::aligned_mat3x4) * 8 + sizeof(glm::aligned_mat3x4) * mt.transformations.size();
   uboSize = ((uboSize + 255) / 256) * 256;
   uboOffset = parent->PushUniformData(&uboData, uboSize);
 }
@@ -352,9 +356,14 @@ bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize)
   iboEnd = 0;
   meshes.reserve(100);
 
-  // TODO: バインディングポイントとUBO名の指定方法を検討する.
-  ubo = UniformBuffer::Create(uboSize, 0, "MeshMatrixUniformData");
+  static const char UniformNameForSkeletalMeshMatrix[] = "MeshMatrixUniformData";
+  ubo = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
   uboData.reserve(uboSize);
+
+  Shader::Cache& shaderCache = Shader::Cache::Instance();
+  progStaticMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
+  progSkeletalMesh = shaderCache.Create("Res/SkeletalMesh.vert", "Res/SkeletalMesh.frag");
+  progSkeletalMesh->BindUniformBlock(UniformNameForSkeletalMeshMatrix, 0);
 
   return true;
 }
@@ -436,10 +445,16 @@ MeshPtr Buffer::GetMesh(const char* meshName) const
 {
   const auto itr = meshes.find(meshName);
   if (itr == meshes.end()) {
-    static const MeshPtr dummy(new Mesh);
+    static MeshPtr dummy(std::make_shared<Mesh>());
     return dummy;
   }
-  return std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node);
+  MeshPtr p(std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node));
+  if (p->node->skin >= 0) {
+    p->program = progSkeletalMesh;
+  } else {
+    p->program = progStaticMesh;
+  }
+  return p;
 }
 
 /**
@@ -1102,7 +1117,7 @@ bool Buffer::LoadMesh(const char* path)
         if (path == "translation") {
           const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
           const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
-          Timeline<glm::vec3> timeline;
+          Timeline<glm::aligned_vec3> timeline;
           timeline.timeline.reserve(inputCount);
           for (int i = 0; i < inputCount; ++i) {
             anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
@@ -1113,7 +1128,7 @@ bool Buffer::LoadMesh(const char* path)
         } else if (path == "rotation") {
           const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
           const glm::quat* pData = static_cast<const glm::quat*>(pOutput);
-          Timeline<glm::quat> timeline;
+          Timeline<glm::aligned_quat> timeline;
           timeline.timeline.reserve(inputCount);
           for (int i = 0; i < inputCount; ++i) {
             anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
@@ -1124,7 +1139,7 @@ bool Buffer::LoadMesh(const char* path)
         } else if (path == "scale") {
           const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
           const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
-          Timeline<glm::vec3> timeline;
+          Timeline<glm::aligned_vec3> timeline;
           timeline.timeline.reserve(inputCount);
           for (int i = 0; i < inputCount; ++i) {
             anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);

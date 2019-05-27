@@ -10,11 +10,16 @@
 #include "Shader.h"
 #include "UniformBuffer.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/type_aligned.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 #include <unordered_map>
 #include <string>
 #include <memory>
+
+namespace glm {
+using aligned_quat = qua<float, aligned_highp>;
+}
 
 namespace Mesh {
 
@@ -79,9 +84,9 @@ struct Node {
   int mesh = -1;
   int skin = -1;
   std::vector<Node*> children;
-  glm::mat4 matLocal = glm::mat4(1);
-  glm::mat4 matGlobal = glm::mat4(1);
-  glm::mat4 matInverseBindPose = glm::mat4(1);
+  glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
+  glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
+  glm::aligned_mat4 matInverseBindPose = glm::aligned_mat4(1);
 };
 
 // アニメーションのキーフレーム.
@@ -100,9 +105,9 @@ struct Timeline {
 
 // アニメーション.
 struct Animation {
-  std::vector<Timeline<glm::vec3>> translationList;
-  std::vector<Timeline<glm::quat>> rotationList;
-  std::vector<Timeline<glm::vec3>> scaleList;
+  std::vector<Timeline<glm::aligned_vec3>> translationList;
+  std::vector<Timeline<glm::aligned_quat>> rotationList;
+  std::vector<Timeline<glm::aligned_vec3>> scaleList;
   float totalTime = 0;
 };
 
@@ -127,8 +132,8 @@ struct File {
 using FilePtr = std::shared_ptr<File>;
 
 struct MeshTransformation {
-  std::vector<glm::mat4> transformations;
-  std::vector<glm::mat4> matRoot;
+  std::vector<glm::aligned_mat4> transformations;
+  std::vector<glm::aligned_mat4> matRoot;
 };
 
 /**
@@ -152,7 +157,7 @@ struct MeshTransformation {
 * 描画方法:
 * - Mesh::Drawで描画.
 */
-struct Mesh
+struct alignas(16) Mesh
 {
   Mesh() = default;
   Mesh(Buffer* p, const FilePtr& f, const Node* n) : parent(p), file(f), node(n) {}
@@ -177,14 +182,14 @@ struct Mesh
   const Node* node = nullptr;
   const Animation* animation = nullptr;
 
-  glm::vec3 translation = glm::vec3(0);
-  glm::quat rotation = glm::quat(glm::vec3(0));
-  glm::vec3 scale = glm::vec3(1);
-  glm::vec4 color = glm::vec4(1);
+  glm::aligned_vec3 translation = glm::vec3(0);
+  glm::aligned_quat rotation = glm::quat(glm::vec3(0));
+  glm::aligned_vec3 scale = glm::vec3(1);
+  glm::aligned_vec4 color = glm::vec4(1);
 
   float frame = 0;
 
-  Shader::ProgramPtr shader;
+  Shader::ProgramPtr program;
   GLintptr uboOffset = 0;
   GLsizeiptr uboSize = 0;
 };
@@ -194,10 +199,10 @@ struct Mesh
 */
 struct alignas(256) UniformDataMeshMatrix
 {
-  glm::vec4 color;
-  glm::mat3x4 matModel[4]; // it must transpose.
-  glm::mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
-  glm::mat3x4 matBones[256]; // it must transpose.
+  glm::aligned_vec4 color;
+  glm::aligned_mat3x4 matModel[4]; // it must transpose.
+  glm::aligned_mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
+  glm::aligned_mat3x4 matBones[256]; // it must transpose.
 };
 
 /**
@@ -250,9 +255,12 @@ private:
   std::unordered_map<std::string, MeshIndex> meshes;
   std::unordered_map<std::string, FilePtr> files;
 
+  Shader::ProgramPtr progStaticMesh;
+  Shader::ProgramPtr progSkeletalMesh;
+
   UniformBufferPtr ubo;
   std::vector<uint8_t> uboData;
-\
+
   bool SetAttribute(
     Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);
 };
