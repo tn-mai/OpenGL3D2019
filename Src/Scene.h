@@ -20,8 +20,8 @@ public:
   virtual ~Scene();
 
   virtual bool Initialize() = 0 {}
-  virtual void ProcessInput(SceneStack&, float) {}
-  virtual void Update(SceneStack&, float) = 0 {}
+  virtual void ProcessInput() {}
+  virtual void Update(float) = 0 {}
   virtual void Render() = 0 {}
   virtual void Finalize() = 0 {}
 
@@ -46,10 +46,7 @@ using ScenePtr = std::shared_ptr<Scene>;
 */
 class SceneStack {
 public:
-  SceneStack();
-  SceneStack(const SceneStack&) = delete;
-  SceneStack& operator=(const SceneStack&) = delete;
-  ~SceneStack() = default;
+  static SceneStack& Instance();
 
   void Push(ScenePtr p);
   void Pop();
@@ -63,6 +60,11 @@ public:
   void Render();
 
 private:
+  SceneStack();
+  SceneStack(const SceneStack&) = delete;
+  SceneStack& operator=(const SceneStack&) = delete;
+  ~SceneStack() = default;
+
   std::vector<ScenePtr> stack;
 };
 

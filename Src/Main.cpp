@@ -16,7 +16,7 @@ int main()
     return 1;
   }
 
-  SceneStack sceneStack;
+  SceneStack& sceneStack = SceneStack::Instance();
   sceneStack.Push(std::make_shared<TitleScene>());
   sceneStack.Current().Initialize();
 

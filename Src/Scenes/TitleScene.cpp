@@ -31,12 +31,23 @@ bool TitleScene::Initialize()
 }
 
 /**
+* シーンの入力を処理する.
+*/
+void TitleScene::ProcessInput()
+{
+  // シーン切り替え.
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
+    SceneStack::Instance().Replace(std::make_shared<MainGameScene>());
+  }
+}
+
+/**
 * シーンを更新する.
 *
-* @param sceneStack シーン制御オブジェクト.
 * @param deltaTime  前回の更新からの経過時間(秒).
 */
-void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
+void TitleScene::Update(float deltaTime)
 {
   GLFWEW::Window& window = GLFWEW::Window::Instance();
   const float w = window.Width();
@@ -54,11 +65,6 @@ void TitleScene::Update(SceneStack& sceneStack, float deltaTime)
   fontRenderer.Scale(glm::vec2(4));
   fontRenderer.AddString(glm::vec2(-300, 0), L"比丘尼遊行録");
   fontRenderer.EndUpdate();
-
-  // シーン切り替え.
-  if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
-    sceneStack.Replace(std::make_shared<MainGameScene>());
-  }
 }
 
 /**

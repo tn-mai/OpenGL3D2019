@@ -82,35 +82,13 @@ bool MainGameScene::Initialize()
 }
 
 /**
-* シーンを更新する.
-*
-* @param sceneStack シーン制御オブジェクト.
-* @param deltaTime  前回の更新からの経過時間(秒).
-*
-* TODO: 地面の上を移動.
-* TODO: ジャンプ動作.
-* TODO: 攻撃動作と攻撃判定.
-* TODO: 敵の出現.
-* TODO: 敵の思考.
-* TODO: 木を植える.
-* TODO: 村人と会話.
-* TODO: ボス.
-* TODO: 法力.
+* シーンの入力を処理する.
 */
-void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
+void MainGameScene::ProcessInput()
 {
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-
-  fontRenderer.BeginUpdate();
   if (IsActive()) {
-    std::wstringstream wss;
-    wss << L"FPS:" << std::fixed << std::setprecision(2) << window.Fps();
-    fontRenderer.AddString(glm::vec2(-600, 300), wss.str().c_str());
-    fontRenderer.AddString(glm::vec2(-600, 260), L"メインゲーム画面");
-  }
-  fontRenderer.EndUpdate();
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
 
-  if (IsActive()) {
     const glm::aligned_vec3 dir(0, 0, -1);
     const glm::aligned_vec3 left = glm::normalize(glm::cross(glm::aligned_vec3(0, 1, 0), dir));
     const float dt = static_cast<float>(window.DeltaTime());
@@ -152,25 +130,54 @@ void MainGameScene::Update(SceneStack& sceneStack, float deltaTime)
       matRY = glm::rotate(glm::aligned_mat4(1), mouseMove.y / 100.0f, left);
     }
     //dir = matRX * matRY * glm::vec4(dir, 1);
-    //dir = normalize(dir);
+    //dir = normalize(dir);}
 
-    meshBuffer.ResetUniformData();
-    meshPlayer->Update(deltaTime);
-    meshTerrain->Update(deltaTime);
-    meshCircle->Update(deltaTime);
-    for (auto& e : meshTrees) {
-      e->Update(deltaTime * 0.25f);
-    }
-    meshBuffer.UploadUniformData();
-
-    // シーン切り替え.
+      // シーン切り替え.
     const GamePad gamepad = window.GetGamePad();
     if (gamepad.buttonDown & GamePad::X) {
-      sceneStack.Push(std::make_shared<StatusScene>());
+      SceneStack::Instance().Push(std::make_shared<StatusScene>());
     } else if (gamepad.buttonDown & GamePad::START) {
-      sceneStack.Replace(std::make_shared<GameOverScene>());
+      SceneStack::Instance().Replace(std::make_shared<GameOverScene>());
     }
   }
+}
+
+/**
+* シーンを更新する.
+*
+* @param deltaTime  前回の更新からの経過時間(秒).
+*
+* TODO: 地面の上を移動.
+* TODO: ジャンプ動作.
+* TODO: 攻撃動作と攻撃判定.
+* TODO: 敵の出現.
+* TODO: 敵の思考.
+* TODO: 木を植える.
+* TODO: 村人と会話.
+* TODO: ボス.
+* TODO: 法力.
+*/
+void MainGameScene::Update(float deltaTime)
+{
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+
+  fontRenderer.BeginUpdate();
+  if (IsActive()) {
+    std::wstringstream wss;
+    wss << L"FPS:" << std::fixed << std::setprecision(2) << window.Fps();
+    fontRenderer.AddString(glm::vec2(-600, 300), wss.str().c_str());
+    fontRenderer.AddString(glm::vec2(-600, 260), L"メインゲーム画面");
+  }
+  fontRenderer.EndUpdate();
+
+  meshBuffer.ResetUniformData();
+  meshPlayer->Update(deltaTime);
+  meshTerrain->Update(deltaTime);
+  meshCircle->Update(deltaTime);
+  for (auto& e : meshTrees) {
+    e->Update(deltaTime * 0.25f);
+  }
+  meshBuffer.UploadUniformData();
 }
 
 /**

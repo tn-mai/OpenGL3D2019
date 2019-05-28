@@ -14,7 +14,8 @@ class StatusScene : public Scene
 public:
   StatusScene();
   virtual bool Initialize() override;
-  virtual void Update(SceneStack&, float) override;
+  virtual void ProcessInput() override;
+  virtual void Update(float) override;
   virtual void Render() override;
   virtual void Finalize() override;
   virtual void Play() override;

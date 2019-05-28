@@ -26,12 +26,23 @@ bool GameOverScene::Initialize()
 }
 
 /**
+* シーンの入力を処理する.
+*/
+void GameOverScene::ProcessInput()
+{
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  const GamePad gamepad = window.GetGamePad();
+  if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
+    SceneStack::Instance().Replace(std::make_shared<TitleScene>());
+  }
+}
+
+/**
 * シーンを更新する.
 *
-* @param sceneStack シーン制御オブジェクト.
 * @param deltaTime  前回の更新からの経過時間(秒).
 */
-void GameOverScene::Update(SceneStack& sceneStack, float deltaTime)
+void GameOverScene::Update(float deltaTime)
 {
   fontRenderer.BeginUpdate();
   fontRenderer.Scale(glm::vec2(1));
@@ -41,13 +52,8 @@ void GameOverScene::Update(SceneStack& sceneStack, float deltaTime)
   fontRenderer.Color(glm::vec4(1, 0.2f, 0.1f, 1));
   fontRenderer.AddString(glm::vec2(-288, 0), L"ゲームオーバー");
   fontRenderer.EndUpdate();
-
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-  const GamePad gamepad = window.GetGamePad();
-  if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
-    sceneStack.Replace(std::make_shared<TitleScene>());
-  }
 }
+
 /**
 * シーンを描画する.
 */

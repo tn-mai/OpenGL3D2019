@@ -25,12 +25,23 @@ bool StatusScene::Initialize()
 }
 
 /**
+* シーンの入力を処理する.
+*/
+void StatusScene::ProcessInput()
+{
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  const GamePad gamepad = window.GetGamePad();
+  if (gamepad.buttonDown & GamePad::B) {
+    SceneStack::Instance().Pop();
+  }
+}
+
+/**
 * シーンを更新する.
 *
-* @param sceneStack シーン制御オブジェクト.
 * @param deltaTime  前回の更新からの経過時間(秒).
 */
-void StatusScene::Update(SceneStack& sceneStack, float deltaTime)
+void StatusScene::Update(float deltaTime)
 {
   fontRenderer.BeginUpdate();
   fontRenderer.AddString(glm::vec2(-600, 320), L"ステータス画面");
@@ -39,12 +50,6 @@ void StatusScene::Update(SceneStack& sceneStack, float deltaTime)
   fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 8), L"武器：　銅の錫杖");
   fontRenderer.AddString(glm::vec2(-400, 360 - 32 * 10), L"防具：　古びた裳付け衣");
   fontRenderer.EndUpdate();
-
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-  const GamePad gamepad = window.GetGamePad();
-  if (gamepad.buttonDown & GamePad::B) {
-    sceneStack.Pop();
-  }
 }
 
 /**

@@ -92,6 +92,17 @@ bool Scene::IsVisible() const
 }
 
 /**
+* シーンスタックのシングルトンインスタンスを取得する.
+*
+* @return シーンスタックのシングルトンインスタンス.
+*/
+SceneStack& SceneStack::Instance()
+{
+  static SceneStack instance;
+  return instance;
+}
+
+/**
 * コンストラクタ.
 */
 SceneStack::SceneStack()
@@ -204,8 +215,11 @@ bool SceneStack::Empty() const
 */
 void SceneStack::Update(float deltaTime)
 {
+  if (!Empty()) {
+    Current().ProcessInput();
+  }
   for (auto& e : stack) {
-    e->Update(*this, deltaTime);
+    e->Update(deltaTime);
   }
 }
 
