@@ -3,6 +3,7 @@
 */
 #include "GLFWEW.h"
 #include <iostream>
+#include <string>
 
 /// GLFW‚ÆGLEW‚ðƒ‰ƒbƒv‚·‚é‚½‚ß‚Ì–¼‘O‹óŠÔ.
 namespace GLFWEW {
@@ -96,6 +97,19 @@ bool Window::Init(int w, int h, const char* title)
   std::cout << "Renderer: " << renderer << "\n";
   const GLubyte* version = glGetString(GL_VERSION);
   std::cout << "Version: " << version << "\n";
+  const GLubyte* extensions = glGetString(GL_EXTENSIONS);
+  std::cout << "Extensions:";
+  for (const GLubyte* p = extensions;; ++p) {
+    if (*p == ' ') {
+      const std::string str(extensions, p);
+      std::cout << "\n  " << str;
+      extensions = p++;
+    } else if (*p == '\0') {
+      break;
+    }
+  }
+  std::cout << "\n";
+
   GLint offsetAlignment = 0;
   glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &offsetAlignment);
   std::cout << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: " << offsetAlignment << " Bytes\n";
