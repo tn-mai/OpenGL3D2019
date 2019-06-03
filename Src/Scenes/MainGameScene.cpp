@@ -19,6 +19,14 @@
   sub 変数番号 数値or変数番号
   if 変数番号(が0でなければ) ジャンプ先ラベル
   メッセージモードの終了 end
+
+  今後の講義予定:
+  - メッシュ表示
+  - ハイトマップ
+  - glTFメッシュ表示(ボーナストラック:　アニメーション)
+  - 球と球の衝突判定
+  - 矩形と球の衝突判定
+  - イベント処理(会話、フラグ制御)
 */
 
 /**
@@ -45,12 +53,18 @@ bool MainGameScene::Initialize()
   heightMap.CreateMesh(meshBuffer, "Terrain");
   texTerrain = Texture::Image2D::Create("Res/ColorMap.tga");
   texTree = Texture::Image2D::Create("Res/TestTree.tga");
+  texOniSmall = Texture::Image2D::Create("Res/oni_s_albedo.tga");
   meshBuffer.LoadMesh("Res/bikuni.gltf");
   meshBuffer.LoadMesh("Res/TestTree.gltf");
+  meshBuffer.LoadMesh("Res/oni_small.gltf");
   meshPlayer = meshBuffer.GetMesh("Bikuni");
   meshPlayer->SetAnimation(0);
   meshTerrain = meshBuffer.GetMesh("Terrain");
   meshCircle = meshBuffer.GetMesh("Circle");
+
+  glm::vec3 startPos(100, 0, 150);
+  startPos.y = heightMap.Height(startPos);
+  meshPlayer->translation = startPos;
 
   static const size_t treeCount = 200;
   meshTrees.reserve(treeCount);
@@ -58,8 +72,8 @@ bool MainGameScene::Initialize()
   rand.seed(0);
   for (size_t i = 0; i < treeCount; ++i) {
     Mesh::MeshPtr p = meshBuffer.GetMesh("TestTree");
-    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(0, heightMap.Size().x)(rand));
-    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(0, heightMap.Size().y)(rand));
+    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
+    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
     p->translation.y = heightMap.Height(p->translation);
     p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::half_pi<float>())(rand), glm::vec3(0, 1, 0));
     p->scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
@@ -69,14 +83,24 @@ bool MainGameScene::Initialize()
     meshTrees.push_back(p);
   }
 
+  static const size_t oniCount = 10;
+  meshEnemies.reserve(oniCount);
+  for (size_t i = 0; i < oniCount; ++i) {
+    Mesh::MeshPtr p = meshBuffer.GetMesh("oni_small");
+    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(-5, 5)(rand)) + startPos.x;
+    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(-5, 5)(rand)) + startPos.z;
+    p->translation.y = heightMap.Height(p->translation);
+    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::half_pi<float>() * 4)(rand), glm::vec3(0, 1, 0));
+    //p->scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand));
+    //p->scale = glm::clamp(p->scale, 0.8f, 1.2f);
+    p->SetAnimation(2);
+    meshEnemies.push_back(p);
+  }
+
   Shader::Cache& shaderCache = Shader::Cache::Instance();
   progMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
   progSkeletalMesh = shaderCache.Create("Res/SkeletalMesh.vert", "Res/SkeletalMesh.frag");
   progSkeletalMesh->BindUniformBlock("MeshMatrixUniformData", 0);
-
-  glm::vec3 startPos(100, 0, 150);
-  startPos.y = heightMap.Height(startPos);
-  meshPlayer->translation = startPos;
 
   return true;
 }
@@ -177,6 +201,9 @@ void MainGameScene::Update(float deltaTime)
   for (auto& e : meshTrees) {
     e->Update(deltaTime * 0.25f);
   }
+  for (auto& e : meshEnemies) {
+    e->Update(deltaTime);
+  }
   meshBuffer.UploadUniformData();
 }
 
@@ -187,9 +214,15 @@ void MainGameScene::Render()
 {
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
 
-  const bool pushSpaceBar = window.KeyPressed(GLFW_KEY_SPACE);
-  const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, pushSpaceBar ? 100 : 15, 7.5f);
-  const glm::mat4 matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::aligned_vec3(0, 1.25f, 0), glm::aligned_vec3(0, 1, 0));
+  glm::mat4 matView;
+  if (window.KeyPressed(GLFW_KEY_SPACE)) {
+    const glm::aligned_vec3 front = glm::aligned_mat3(meshPlayer->rotation) * glm::aligned_vec3(0, 0, 1);
+    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 2, 0);
+    matView = glm::lookAt(cameraPos, meshPlayer->translation + front * 5.0f, glm::aligned_vec3(0, 1, 0));
+  } else {
+    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 15, 7.5f);
+    matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::aligned_vec3(0, 1.25f, 0), glm::aligned_vec3(0, 1, 0));
+  }
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
   const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
@@ -225,6 +258,11 @@ void MainGameScene::Render()
       progSkeletalMesh->SetUniformInt(locMeshIndex, 0);
     }
     meshPlayer->Draw();
+
+    texOniSmall->Bind(0);
+    for (const auto& e : meshEnemies) {
+      e->Draw();
+    }
 
     progSkeletalMesh->Unuse();
   }
