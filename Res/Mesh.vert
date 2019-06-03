@@ -2,6 +2,8 @@
 * @file Sprite.vert
 */
 #version 410
+#extension AMD_gpu_shader_half_float : require
+#extension AMD_gpu_shader_half_float_fetch : require
 
 layout(location=0) in vec3 vPosition;
 layout(location=1) in vec4 vColor;
@@ -41,5 +43,5 @@ void main()
   mat4 matModel = mat4(transpose(vd.matModel[meshIndex]));
   outNormal = mat3(vd.matNormal[meshIndex]) * vNormal;
   outPosition = vec3(matModel * vec4(vPosition, 1.0));
-  gl_Position = matVP * matModel * vec4(vPosition, 1.0);
+  gl_Position = matVP * (matModel * vec4(vPosition, 1.0));
 }
