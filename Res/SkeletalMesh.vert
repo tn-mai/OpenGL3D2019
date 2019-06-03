@@ -46,7 +46,8 @@ void main()
   mat4 matSkin = mat4(transpose(matSkinTmp));
   matSkin[3][3] = dot(vWeights, vec4(1)); // ウェイトが正規化されていない場合の対策([3][3]が1.0になるとは限らない).
   mat4 matModel = mat4(transpose(vd.matModel[meshIndex])) * matSkin;
-  outNormal = mat3(vd.matNormal[meshIndex]) * mat3(matSkin) * vNormal;
+  mat3 matNormal = transpose(inverse(mat3(matModel)));
+  outNormal = matNormal * vNormal;
   outPosition = vec3(matModel * vec4(vPosition, 1.0));
   gl_Position = matVP * matModel * vec4(vPosition, 1.0);
 }

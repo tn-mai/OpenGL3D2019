@@ -41,7 +41,7 @@ void main()
   outColor = vColor;
   outTexCoord = vTexCoord;
   mat4 matModel = mat4(transpose(vd.matModel[meshIndex]));
-  outNormal = mat3(vd.matNormal[meshIndex]) * vNormal;
+  outNormal = transpose(inverse(mat3(matModel))) * vNormal;
   outPosition = vec3(matModel * vec4(vPosition, 1.0));
   gl_Position = matVP * (matModel * vec4(vPosition, 1.0));
 }
