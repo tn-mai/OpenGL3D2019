@@ -14,7 +14,14 @@
 namespace Mesh {
 
 /**
+* プリミティブを作成する.
 *
+* @param count    プリミティブのインデックスデータの数.
+* @param type     インデックスデータの型(GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, GL_UNSIGNED_INTのいずれか).
+* @param iOffset  IBO内のインデックスデータの開始位置.
+* @param vOffset  VBO内の頂点データの開始位置.
+*
+* @return 作成したPrimitive構造体.
 */
 Primitive Buffer::CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const
 {
@@ -438,6 +445,9 @@ void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset
   pFile->materials[0].baseColor = glm::vec4(1);
   pFile->nodes.resize(1);
   pFile->nodes[0].mesh = 0;
+  if (files.find(name) != files.end()) {
+    std::cerr << "[警告]" << __func__ << ": " << pFile->name << "という名前は登録済みです.\n";
+  }
   files.insert(std::make_pair(pFile->name, pFile));
   meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, &pFile->nodes[0] }));
   std::cout << "Mesh::Buffer: メッシュ'" << name << "'を追加.\n";
@@ -473,39 +483,39 @@ MeshPtr Buffer::GetMesh(const char* meshName) const
 */
 void Buffer::CreateCube(const char* name)
 {
-  static const glm::vec3 basePositions[] = { {-1, 1, 1}, {-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1} };
+  /*
+       6---7
+      /|  /|
+     / 5-/-4
+    3---2 /
+    |/  |/
+    0---1
+  */
+  static const glm::vec3 basePositions[] = {
+    {-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1},
+    { 1,-1,-1}, {-1,-1,-1}, {-1, 1,-1}, { 1, 1,-1},
+  };
   static const glm::vec2 baseTexCoords[] = { { 0, 1}, { 0, 0}, { 1, 0}, { 1, 1} };
   static const GLubyte baseIndices[] = { 0, 1, 2, 2, 3, 0 };
-  static const glm::vec3 normal(0, 0, 1);
+  static const glm::vec3 normals[] = {
+    { 0, 0, 1}, { 1, 0, 0}, { 0, 0,-1}, {-1, 0, 0}, { 0, -1, 0}, { 0, 1, 0} };
+  static const int planes[6][4] = {
+    { 0, 1, 2, 3}, { 1, 4, 7, 2}, { 4, 5, 6, 7}, { 5, 0, 3, 6},
+    { 5, 4, 1, 0}, { 3, 2, 7, 6} };
 
   Vertex v;
   v.color = glm::vec4(1);
   std::vector<Vertex> vertices;
   std::vector<GLubyte> indices;
-  for (int face = 0; face < 4; ++face) {
-    const float angle = static_cast<float>(face) / 4.0f * glm::two_pi<float>();
-    const glm::mat4 m = glm::rotate(glm::mat4(1), angle, glm::vec3(0, 1, 0));
-    v.normal = m * glm::vec4(normal, 1);
+  for (size_t plane = 0; plane < 6; ++plane) {
     for (size_t i = 0; i < 4; ++i) {
-      v.position = m * glm::vec4(basePositions[i], 1);
+      v.position = basePositions[planes[plane][i]];
       v.texCoord = baseTexCoords[i];
+      v.normal = normals[plane];
       vertices.push_back(v);
     }
     for (size_t i = 0; i < 6; ++i) {
-      indices.push_back(static_cast<GLubyte>(baseIndices[i] + face * 4));
-    }
-  }
-  for (int face = 0; face < 2; ++face) {
-    const float angle = static_cast<float>(face) / 2.0f * glm::two_pi<float>() + glm::half_pi<float>();
-    const glm::mat4 m = glm::rotate(glm::mat4(1), angle, glm::vec3(1, 0, 0));
-    v.normal = m * glm::vec4(normal, 1);
-    for (size_t i = 0; i < 4; ++i) {
-      v.position = m * glm::vec4(basePositions[i], 1);
-      v.texCoord = baseTexCoords[i];
-      vertices.push_back(v);
-    }
-    for (size_t i = 0; i < 6; ++i) {
-      indices.push_back(static_cast<GLubyte>(baseIndices[i] + (face + 4) * 4));
+      indices.push_back(static_cast<GLubyte>(baseIndices[i] + plane * 4));
     }
   }
   const size_t vOffset = AddVertexData(vertices.data(), vertices.size() * sizeof(Vertex));

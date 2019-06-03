@@ -44,6 +44,7 @@ struct Vertex
 struct Material {
   glm::vec4 baseColor = glm::vec4(1);
   Texture::Image2DPtr texture;
+  Shader::ProgramPtr program;
 };
 
 // メッシュプリミティブ.
@@ -55,7 +56,7 @@ struct Primitive {
   GLint baseVertex = 0;
   std::shared_ptr<VertexArrayObject> vao;
   bool hasColorAttribute = false;
-  int material = 0;
+  size_t material = 0;
 };
 
 // メッシュデータ.
