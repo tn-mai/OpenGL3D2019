@@ -102,14 +102,7 @@ bool HeightMap::CreateMesh(Mesh::Buffer& meshBuffer, const char* name)
   }
   const size_t iOffset = meshBuffer.AddIndexData(indices.data(), indices.size() * sizeof(GLushort));
 
-  Mesh::Mesh mesh;
-  mesh.name = "Terrain";
-  mesh.baseVertex = vOffset / sizeof(Mesh::Vertex);
-  mesh.count = indices.size();
-  mesh.indices = reinterpret_cast<const GLvoid*>(iOffset);
-  mesh.mode = GL_TRIANGLES;
-  mesh.type = GL_UNSIGNED_SHORT;
-  meshBuffer.AddMesh(mesh);
+  meshBuffer.AddMesh("Terrain", indices.size(), GL_UNSIGNED_SHORT, iOffset, vOffset);
 
   return true;
 }

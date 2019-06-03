@@ -23,6 +23,7 @@ using aligned_quat = qua<float, aligned_highp>;
 
 namespace Mesh {
 
+// 先行宣言.
 class Buffer;
 using BufferPtr = std::shared_ptr<Buffer>;
 struct Mesh;
@@ -39,16 +40,6 @@ struct Vertex
   GLushort  joints[4];
 };
 
-// 頂点属性.
-struct VertexAttribute
-{
-  GLuint index = GL_INVALID_INDEX;
-  GLint size = 0;
-  GLenum type = GL_FLOAT;
-  GLsizei stride = 0;
-  size_t offset = 0;
-};
-
 // マテリアル.
 struct Material {
   glm::vec4 baseColor = glm::vec4(1);
@@ -62,8 +53,9 @@ struct Primitive {
   GLenum type;
   const GLvoid* indices;
   GLint baseVertex = 0;
-  VertexAttribute attributes[8];
-  int material;
+  std::shared_ptr<VertexArrayObject> vao;
+  bool hasColorAttribute = false;
+  int material = 0;
 };
 
 // メッシュデータ.
@@ -117,7 +109,6 @@ struct Scene {
   std::vector<const Node*> meshNodes;
 };
 
-
 // ファイル.
 struct File {
   std::string name; // ファイル名.
@@ -127,7 +118,6 @@ struct File {
   std::vector<Material> materials;
   std::vector<Skin> skins;
   std::vector<Animation> animations;
-  const VertexArrayObject* vao = nullptr;
 };
 using FilePtr = std::shared_ptr<File>;
 
@@ -170,11 +160,11 @@ struct alignas(16) Mesh
 
   std::string name;
 
-  GLenum mode = GL_TRIANGLES;
-  GLsizei count = 0;
-  GLenum type = GL_UNSIGNED_SHORT;
-  const GLvoid* indices = 0;
-  GLint baseVertex = 0;
+//  GLenum mode = GL_TRIANGLES;
+//  GLsizei count = 0;
+//  GLenum type = GL_UNSIGNED_SHORT;
+//  const GLvoid* indices = 0;
+//  GLint baseVertex = 0;
   
   Buffer* parent = nullptr;
 
@@ -227,7 +217,7 @@ public:
   bool Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize);
   GLintptr AddVertexData(const void* data, size_t size);
   GLintptr AddIndexData(const void* data, size_t size);
-  void AddMesh(const Mesh&);
+  void AddMesh(const char* name, size_t count, GLenum type, size_t iOffset, size_t vOffset);
   bool LoadMesh(const char* path);
   MeshPtr GetMesh(const char* meshName) const;
   void Bind();
@@ -261,6 +251,7 @@ private:
   UniformBufferPtr ubo;
   std::vector<uint8_t> uboData;
 
+  Primitive CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const;
   bool SetAttribute(
     Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);
 };

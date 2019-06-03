@@ -16,6 +16,32 @@ namespace Mesh {
 /**
 *
 */
+Primitive Buffer::CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const
+{
+  Primitive prim;
+  prim.mode = GL_TRIANGLES;
+  prim.count = static_cast<GLsizei>(count);
+  prim.type = type;
+  prim.indices = reinterpret_cast<const GLvoid*>(iOffset);
+  prim.baseVertex = vOffset / sizeof(Vertex);
+  std::shared_ptr<VertexArrayObject> vao = std::make_shared<VertexArrayObject>();
+  vao->Create(vbo.Id(), ibo.Id());
+  vao->Bind();
+  vao->VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, position));
+  vao->VertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, color));
+  vao->VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, texCoord));
+  vao->VertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, normal));
+  vao->Unbind();
+  prim.vao = vao;
+  prim.hasColorAttribute = true;
+  prim.material = 0;
+
+  return prim;
+}
+
+/**
+*
+*/
 void Mesh::SetAnimation(int animationId)
 {
   if (file) {
@@ -281,7 +307,7 @@ void Mesh::Update(float deltaTime)
 */
 void Mesh::Draw() const
 {
-  if (!file || !file->vao) {
+  if (!file) {
     return;
   }
 
@@ -295,18 +321,8 @@ void Mesh::Draw() const
   const MeshData& meshData = file->meshes[node->mesh];
   GLuint prevTexId = 0;
   for (const auto& prim : meshData.primitives) {
-    file->vao->ResetVertexAttribPointer();
-    bool hasColorAttr = false;
-    for (const auto& attr : prim.attributes) {
-      if (attr.index == GL_INVALID_INDEX) {
-        continue;
-      }
-      if (attr.index == 1) {
-        hasColorAttr = true;
-      }
-      file->vao->VertexAttribPointer(attr.index, attr.size, attr.type, GL_FALSE, attr.stride, attr.offset);
-    }
-    if (!hasColorAttr) {
+    prim.vao->Bind();
+    if (!prim.hasColorAttribute) {
       static const glm::vec4 color(1);
       glVertexAttrib4fv(1, &color.x);
     }
@@ -316,13 +332,14 @@ void Mesh::Draw() const
       if (m.texture) {
         const GLuint texId = m.texture->Id();
         if (prevTexId != texId) {
-          //program->BindTexture(0, texId);
+          m.texture->Bind(0);
           prevTexId = texId;
         }
       }
       //program->SetMaterialColor(m.baseColor);
     }
     glDrawElementsBaseVertex(prim.mode, prim.count, prim.type, prim.indices, prim.baseVertex);
+    prim.vao->Unbind();
   }
 }
   
@@ -405,33 +422,25 @@ GLintptr Buffer::AddIndexData(const void* data, size_t size)
 /**
 * メッシュを追加する.
 *
-* @param mesh 追加するメッシュ.
+* @param data 追加するメッシュデータ.
 */
-void Buffer::AddMesh(const Mesh& mesh)
+void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset, size_t vOffset)
 {
   FilePtr pFile = std::make_shared<File>();
-  pFile->name = mesh.name;
-  pFile->meshes.resize(1);
-  pFile->meshes[0].name = mesh.name;
-  pFile->meshes[0].primitives.resize(1);
-  pFile->meshes[0].primitives[0].mode = mesh.mode;
-  pFile->meshes[0].primitives[0].count = mesh.count;
-  pFile->meshes[0].primitives[0].type = mesh.type;
-  pFile->meshes[0].primitives[0].indices = mesh.indices;
-  pFile->meshes[0].primitives[0].baseVertex = mesh.baseVertex;
-  pFile->meshes[0].primitives[0].attributes[0] = { 0, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, position) };
-  pFile->meshes[0].primitives[0].attributes[1] = { 1, 4, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, color) };
-  pFile->meshes[0].primitives[0].attributes[2] = { 2, 2, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, texCoord) };
-  pFile->meshes[0].primitives[0].attributes[3] = { 3, 3, GL_FLOAT, sizeof(Vertex), offsetof(Vertex, normal) };
-  pFile->meshes[0].primitives[0].material = 0;
+  pFile->name = name;
+
+  MeshData data;
+  data.name = name;
+  data.primitives.push_back(CreatePrimitve(count, type, iOffset, vOffset));
+  pFile->meshes.push_back(data);
+
   pFile->materials.resize(1);
   pFile->materials[0].baseColor = glm::vec4(1);
   pFile->nodes.resize(1);
   pFile->nodes[0].mesh = 0;
-  pFile->vao = &vao;
   files.insert(std::make_pair(pFile->name, pFile));
   meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, &pFile->nodes[0] }));
-  std::cout << "Mesh::Buffer: メッシュ'" << mesh.name << "'を追加.\n";
+  std::cout << "Mesh::Buffer: メッシュ'" << name << "'を追加.\n";
 }
 
 /**
@@ -502,13 +511,7 @@ void Buffer::CreateCube(const char* name)
   const size_t vOffset = AddVertexData(vertices.data(), vertices.size() * sizeof(Vertex));
   const size_t iOffset = AddIndexData(indices.data(), indices.size() * sizeof(GLubyte));
 
-  Mesh mesh;
-  mesh.name = name;
-  mesh.type = GL_UNSIGNED_BYTE;
-  mesh.count = static_cast<GLsizei>(indices.size());
-  mesh.indices = reinterpret_cast<const GLvoid*>(iOffset);
-  mesh.baseVertex = vOffset / sizeof(Vertex);
-  AddMesh(mesh);
+  AddMesh(name, indices.size(), GL_UNSIGNED_BYTE, iOffset, vOffset);
 }
 
 /**
@@ -557,13 +560,7 @@ void Buffer::CreateCircle(const char* name, size_t segments)
   indices.push_back(1);
   const size_t iOffset = AddIndexData(indices.data(), indices.size() * sizeof(GLubyte));
 
-  Mesh mesh;
-  mesh.name = name;
-  mesh.type = GL_UNSIGNED_BYTE;
-  mesh.count = static_cast<GLsizei>(indices.size());
-  mesh.indices = reinterpret_cast<const GLvoid*>(iOffset);
-  mesh.baseVertex = vOffset / sizeof(Vertex);
-  AddMesh(mesh);
+  AddMesh(name, indices.size(), GL_UNSIGNED_BYTE, iOffset, vOffset);
 }
 
 /**
@@ -664,13 +661,7 @@ void Buffer::CreateSphere(const char* name, size_t segments, size_t rings)
 
   const size_t iOffset = AddIndexData(indices.data(), indices.size() * sizeof(GLushort));
 
-  Mesh mesh;
-  mesh.name = name;
-  mesh.type = GL_UNSIGNED_SHORT;
-  mesh.count = static_cast<GLsizei>(indices.size());
-  mesh.indices = reinterpret_cast<const GLvoid*>(iOffset);
-  mesh.baseVertex = vOffset / sizeof(Vertex);
-  AddMesh(mesh);
+  AddMesh(name, indices.size(), GL_UNSIGNED_SHORT, iOffset, vOffset);
 }
 
 /**
@@ -822,7 +813,6 @@ bool Buffer::SetAttribute(
     return true;
   }
   static const char* const typeNameList[] = { "", "SCALAR", "VEC2", "VEC3", "VEC4" };
-  VertexAttribute& attr = prim.attributes[index];
   if (accessor["type"].string_value() != typeNameList[size]) {
     std::cerr << "ERROR: データは" << typeNameList[size] << "でなくてはなりません \n";
     std::cerr << "  type = " << accessor["type"].string_value() << "\n";
@@ -833,12 +823,10 @@ bool Buffer::SetAttribute(
   size_t byteLength;
   int byteStride;
   GetBuffer(accessor, bufferViews, binFiles, &p, &byteLength, &byteStride);
-
-  attr.index = index;
-  attr.size = size;
-  attr.type = accessor["componentType"].int_value();
-  attr.stride = byteStride;
-  attr.offset = vboEnd;
+  const GLenum type = accessor["componentType"].int_value();
+  prim.vao->Bind();
+  prim.vao->VertexAttribPointer(index, size, type, GL_FALSE, byteStride, vboEnd);
+  prim.vao->Unbind();
 
   vbo.BufferSubData(vboEnd, byteLength, p);
   vboEnd += ((byteLength + 3) / 4) * 4;
@@ -952,6 +940,8 @@ bool Buffer::LoadMesh(const char* path)
       }
 
       // 頂点属性.
+      mesh.primitives[primId].vao = std::make_shared<VertexArrayObject>();
+      mesh.primitives[primId].vao->Create(vbo.Id(), ibo.Id());
       SetAttribute(mesh.primitives[primId], accessors[accessorId_position], bufferViews, binFiles, 0, 3);
       SetAttribute(mesh.primitives[primId], accessors[accessorId_texcoord], bufferViews, binFiles, 2, 2);
       SetAttribute(mesh.primitives[primId], accessors[accessorId_normal], bufferViews, binFiles, 3, 3);
@@ -1154,7 +1144,6 @@ bool Buffer::LoadMesh(const char* path)
   }
 
   file.name = path;
-  file.vao = &vao;
   files.insert(std::make_pair(file.name, pFile));
   for (size_t i = 0; i < file.nodes.size(); ++i) {
     const int meshIndex = file.nodes[i].mesh;
