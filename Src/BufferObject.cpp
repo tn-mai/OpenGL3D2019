@@ -56,6 +56,22 @@ void BufferObject::Destroy()
 }
 
 /**
+*
+*/
+void BufferObject::Bind() const
+{
+  glBindBuffer(target, id);
+}
+
+/**
+*
+*/
+void BufferObject::Unbind() const
+{
+  glBindBuffer(target, 0);
+}
+
+/**
 * VAOを作成する.
 *
 * @param vbo  頂点バッファオブジェクトのID.

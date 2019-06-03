@@ -18,9 +18,12 @@ public:
 
   bool Create(GLenum target, GLsizeiptr size, const GLvoid* data = nullptr, GLenum usage = GL_STATIC_DRAW);
   bool BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
+  void Bind() const;
+  void Unbind() const;
   void Destroy();
   GLuint Id() const { return id; }
   GLsizeiptr Size() const { return size; }
+
 private:
   GLenum target = 0;
   GLuint id = 0;
