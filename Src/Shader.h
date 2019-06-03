@@ -27,6 +27,7 @@ public:
   void Use() const;
   void Unuse() const;
   void SetViewProjectionMatrix(const glm::mat4&) const;
+  void SetModelMatrix(const glm::mat4&) const;
   bool BindUniformBlock(const char* blockName, GLuint bindingPoint);
   GLint GetUniformLocation(const char* uniformName) const;
   void SetUniformInt(GLint location, GLint value) const;
@@ -34,6 +35,7 @@ public:
 private:
   GLuint id = 0; // ÉvÉçÉOÉâÉÄID.
   GLint locMatVP = -1;
+  GLint locMatModel = -1;
 };
 using ProgramPtr = std::shared_ptr<Program>;
 

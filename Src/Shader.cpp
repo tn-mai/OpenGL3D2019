@@ -135,6 +135,7 @@ Program::Program(const char* vsPath, const char* fsPath)
   id = BuildFromFile(vsPath, fsPath);
   if (id) {
     locMatVP = glGetUniformLocation(id, "matVP");
+    locMatModel = glGetUniformLocation(id, "matModel");
   }
 }
 
@@ -184,6 +185,18 @@ void Program::SetViewProjectionMatrix(const glm::mat4& m) const
 {
   if (locMatVP >= 0) {
     glUniformMatrix4fv(locMatVP, 1, GL_FALSE, &m[0][0]);
+  }
+}
+
+/**
+* 描画に使われるモデル行列を設定する.
+*
+* @param m 設定するモデル行列.
+*/
+void Program::SetModelMatrix(const glm::mat4& m) const
+{
+  if (locMatModel >= 0) {
+    glUniformMatrix4fv(locMatModel, 1, GL_FALSE, &m[0][0]);
   }
 }
 
