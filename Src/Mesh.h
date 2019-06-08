@@ -102,6 +102,7 @@ struct Animation {
   std::vector<Timeline<glm::aligned_quat>> rotationList;
   std::vector<Timeline<glm::aligned_vec3>> scaleList;
   float totalTime = 0;
+  std::string name;
 };
 
 // ÉVÅ[Éì.

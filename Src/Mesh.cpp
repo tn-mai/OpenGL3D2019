@@ -1067,6 +1067,7 @@ bool Buffer::LoadMesh(const char* path)
       tmpSkin.joints[i] = jointId;
       file.nodes[jointId].matInverseBindPose = inverseBindPoseList[i];
     }
+    tmpSkin.name = skin["name"].string_value();
     file.skins.push_back(tmpSkin);
   }
 
@@ -1091,6 +1092,7 @@ bool Buffer::LoadMesh(const char* path)
       anime.translationList.reserve(32);
       anime.rotationList.reserve(32);
       anime.scaleList.reserve(32);
+      anime.name = animation["name"].string_value();
 
       const std::vector<json11::Json>& channels = animation["channels"].array_items();
       const std::vector<json11::Json>& samplers = animation["samplers"].array_items();
@@ -1162,6 +1164,18 @@ bool Buffer::LoadMesh(const char* path)
     }
     const MeshData& mesh = file.meshes[meshIndex];
     meshes.insert(std::make_pair(mesh.name, MeshIndex{ pFile, &pFile->nodes[i] }));
+  }
+
+  std::cout << "[INFO]" << __func__ << ": '" << path << "'‚ð“Ç‚Ýž‚Ý‚Ü‚µ‚½.\n";
+  std::cout << "  total nodes = " << file.nodes.size() << "\n";
+  for (size_t i = 0; i < file.meshes.size(); ++i) {
+    std::cout << "  mesh[" << i << "] = " << file.meshes[i].name << "\n";
+  }
+  for (size_t i = 0; i < file.animations.size(); ++i) {
+    std::cout << "  animation[" << i << "] = " << file.animations[i].name << "(" << file.animations[i].totalTime << "sec)\n";
+  }
+  for (size_t i = 0; i < file.skins.size(); ++i) {
+    std::cout << "  skin[" << i << "] = " << file.skins[i].name << "(" << file.skins[i].joints.size() << ")\n";
   }
 
   return true;
