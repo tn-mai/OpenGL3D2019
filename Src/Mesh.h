@@ -250,7 +250,8 @@ private:
   Shader::ProgramPtr progStaticMesh;
   Shader::ProgramPtr progSkeletalMesh;
 
-  UniformBufferPtr ubo;
+  int currentUboIndex = 0;
+  UniformBufferPtr ubo[2];
   std::vector<uint8_t> uboData;
 
   Primitive CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const;

@@ -381,7 +381,8 @@ bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize)
   meshes.reserve(100);
 
   static const char UniformNameForSkeletalMeshMatrix[] = "MeshMatrixUniformData";
-  ubo = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
+  ubo[0] = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
+  ubo[1] = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
   uboData.reserve(uboSize);
 
   Shader::Cache& shaderCache = Shader::Cache::Instance();
@@ -1194,7 +1195,8 @@ void Buffer::ResetUniformData()
 */
 GLintptr Buffer::PushUniformData(const void* data, size_t size)
 {
-  if (uboData.size() + size >= static_cast<size_t>(ubo->Size())) {
+  UniformBufferPtr pUbo = ubo[currentUboIndex];
+  if (uboData.size() + size >= static_cast<size_t>(pUbo->Size())) {
     return -1;
   }
   const uint8_t* p = static_cast<const uint8_t*>(data);
@@ -1210,7 +1212,9 @@ GLintptr Buffer::PushUniformData(const void* data, size_t size)
 void Buffer::UploadUniformData()
 {
   if (!uboData.empty()) {
-    ubo->BufferSubData(uboData.data(), 0, uboData.size());
+    UniformBufferPtr pUbo = ubo[currentUboIndex];
+    pUbo->BufferSubData(uboData.data(), 0, uboData.size());
+    currentUboIndex = !currentUboIndex;
   }
 }
 
@@ -1219,7 +1223,7 @@ void Buffer::UploadUniformData()
 */
 void Buffer::BindUniformData(GLintptr offset, GLsizeiptr size)
 {
-  ubo->BindBufferRange(offset, size);
+  ubo[!currentUboIndex]->BindBufferRange(offset, size);
 }
 
 } // namespace Mesh
