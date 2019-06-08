@@ -47,7 +47,7 @@ bool MainGameScene::Initialize()
   fontRenderer.Init(1000);
   fontRenderer.LoadFromFile("Res/font.fnt");
 
-  meshBuffer.Init(sizeof(Mesh::Vertex) * 1000000, sizeof(GLushort) * 3000000, sizeof(Mesh::UniformDataMeshMatrix) * 100);
+  meshBuffer.Init(sizeof(Mesh::Vertex) * 1'000'000, sizeof(GLushort) * 3'000'000, sizeof(Mesh::UniformDataMeshMatrix) * 100);
   meshBuffer.CreateCircle("Circle", 8);
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain");
@@ -66,7 +66,17 @@ bool MainGameScene::Initialize()
   startPos.y = heightMap.Height(startPos);
   meshPlayer->translation = startPos;
 
+  meshCircle->translation = startPos + glm::vec3(0, 2, 0);
+
+#ifndef NDEBUG
   static const size_t treeCount = 200;
+  static const size_t oniCount = 16;
+  static const int oniRange = 5;
+#else
+  static const size_t treeCount = 1000;
+  static const size_t oniCount = 100;
+  static const int oniRange = 20;
+#endif
   meshTrees.reserve(treeCount);
   std::mt19937 rand;
   rand.seed(0);
@@ -75,7 +85,7 @@ bool MainGameScene::Initialize()
     p->translation.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
     p->translation.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
     p->translation.y = heightMap.Height(p->translation);
-    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::half_pi<float>())(rand), glm::vec3(0, 1, 0));
+    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand), glm::vec3(0, 1, 0));
     p->scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
     p->scale = glm::clamp(p->scale, 0.4f, 1.2f);
     p->SetAnimation(0);
@@ -83,17 +93,17 @@ bool MainGameScene::Initialize()
     meshTrees.push_back(p);
   }
 
-  static const size_t oniCount = 10;
   meshEnemies.reserve(oniCount);
   for (size_t i = 0; i < oniCount; ++i) {
     Mesh::MeshPtr p = meshBuffer.GetMesh("oni_small");
-    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(-5, 5)(rand)) + startPos.x;
-    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(-5, 5)(rand)) + startPos.z;
+    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.x;
+    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.z;
     p->translation.y = heightMap.Height(p->translation);
-    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::half_pi<float>() * 4)(rand), glm::vec3(0, 1, 0));
-    //p->scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand));
-    //p->scale = glm::clamp(p->scale, 0.8f, 1.2f);
-    p->SetAnimation(2);
+    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand), glm::vec3(0, 1, 0));
+    p->scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand) + 0.5f);
+    p->scale = glm::clamp(p->scale, 0.75f, 1.25f);
+    p->SetAnimation(i % 5);
+    p->frame = std::uniform_real_distribution<float>(0, 1)(rand);
     meshEnemies.push_back(p);
   }
 
