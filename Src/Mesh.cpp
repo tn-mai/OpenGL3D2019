@@ -119,18 +119,18 @@ T Interporation(const Timeline<T>& data, float frame)
     return data.timeline.back().value;
   }
   const auto minFrame = maxFrame - 1;
-  const float ratio = (frame - minFrame->frame) / (maxFrame->frame - minFrame->frame);
-  return minFrame->value * (1 - ratio) + maxFrame->value * ratio;
+  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
+  return glm::mix(minFrame->value, maxFrame->value, ratio);
 }
 
 /**
 *
 */
-template<>
-glm::quat Interporation(const Timeline<glm::quat>& data, float frame)
+template<typename T, glm::qualifier Q>
+glm::qua<T, Q> Interporation(const Timeline<glm::qua<T, Q> >& data, float frame)
 {
   const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
-    [](const KeyFrame<glm::quat>& keyFrame, float frame) { return keyFrame.frame < frame; });
+    [](const KeyFrame<glm::qua<T, Q>>& keyFrame, float frame) { return keyFrame.frame < frame; });
   if (maxFrame == data.timeline.begin()) {
     return data.timeline.front().value;
   }
@@ -138,7 +138,7 @@ glm::quat Interporation(const Timeline<glm::quat>& data, float frame)
     return data.timeline.back().value;
   }
   const auto minFrame = maxFrame - 1;
-  const float ratio = (frame - minFrame->frame) / (maxFrame->frame - minFrame->frame);
+  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
   return glm::slerp(minFrame->value, maxFrame->value, ratio);
 }
 
