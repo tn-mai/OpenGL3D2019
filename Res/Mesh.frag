@@ -23,7 +23,7 @@ void main()
   if (fragColor.a < 0.75) {
     discard;
   }
-  vec3 vLight = normalize(vec3(1, -2, -1));
+  vec3 vLight = normalize(vec3(1, -1.5, -1));
   float power = dot(normalize(inNormal), -vLight);
   fragColor.rgb *= power;
 }

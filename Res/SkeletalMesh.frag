@@ -21,8 +21,12 @@ void main()
   if (fragColor.a < 0.75) {
     discard;
   }
-  vec3 vLight = normalize(vec3(1, -2, -1));
+  vec3 vLight = normalize(vec3(1, -1.5, -1));
   float power = max(dot(normalize(inNormal), -vLight), 0.0);
-  power = sqrt(floor(power * power * 3.0) * (1.0 / 3.0)) + 0.2;
+  if (power >= 0.995) {
+	power = 1.25;
+  } else {
+  power = sqrt(floor(power * 3.0) * (1.0 / 3.0)) + 0.2;
+  }
   fragColor.rgb *= power;
 }
