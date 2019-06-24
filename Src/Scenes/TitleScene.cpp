@@ -50,8 +50,8 @@ void TitleScene::ProcessInput()
 void TitleScene::Update(float deltaTime)
 {
   GLFWEW::Window& window = GLFWEW::Window::Instance();
-  const float w = window.Width();
-  const float h = window.Height();
+  const float w = static_cast<float>(window.Width());
+  const float h = static_cast<float>(window.Height());
   const float lh = fontRenderer.LineHeight();
 
   spriteRenderer.BeginUpdate();
