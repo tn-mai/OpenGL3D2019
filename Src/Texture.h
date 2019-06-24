@@ -4,6 +4,7 @@
 #ifndef TEXTURE_H_INCLUDED
 #define TEXTURE_H_INCLUDED
 #include <GL/glew.h>
+#include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
 
@@ -12,12 +13,19 @@ namespace Texture {
 class Image2D;
 using Image2DPtr = std::shared_ptr<Image2D>;
 
-struct ImageData {
-  GLint width;
-  GLint height;
-  GLenum format;
-  GLenum type;
-  std::vector<uint8_t> data;
+/**
+* 画像データ.
+*/
+class ImageData {
+public:
+  glm::vec4 GetColor(int x, int y) const;
+
+public:
+  GLint width = 0; ///< 横のピクセル数.
+  GLint height = 0; ///< 縦のピクセル数.
+  GLenum format = GL_NONE; ///< どの色情報が記録されているか.
+  GLenum type = GL_NONE; ///< それぞれの色情報のビット配置.
+  std::vector<uint8_t> data; ///< バイトデータ.
 };
 
 GLuint CreateImage2D(GLsizei width, GLsizei height, const GLvoid* data, GLenum format, GLenum type);
