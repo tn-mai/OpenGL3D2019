@@ -23,7 +23,7 @@ namespace Mesh {
 *
 * @return 作成したPrimitive構造体.
 */
-Primitive Buffer::CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const
+Primitive Buffer::CreatePrimitive(size_t count, GLenum type, size_t iOffset, size_t vOffset) const
 {
   Primitive prim;
   prim.mode = GL_TRIANGLES;
@@ -55,6 +55,24 @@ void Mesh::SetAnimation(int animationId)
     if (animationId >= 0 && animationId < static_cast<int>(file->animations.size())) {
       animation = &file->animations[animationId];
       frame = 0;
+      isLoop = true;
+    }
+  }
+}
+
+/**
+*
+*/
+void Mesh::SetAnimation(const char* name)
+{
+  if (file) {
+    for (const auto& e : file->animations) {
+      if (e.name == name) {
+        animation = &e;
+        frame = 0;
+        isLoop = true;
+        break;
+      }
     }
   }
 }
@@ -64,10 +82,33 @@ void Mesh::SetAnimation(int animationId)
 */
 int Mesh::GetAnimation() const
 {
-  if (!file) {
+  if (!file || !animation) {
     return 0;
   }
   return animation - &file->animations[0];
+}
+
+/**
+*
+*/
+const std::string& Mesh::GetAnimationName() const
+{
+  if (!animation) {
+    static const std::string dummy("");
+    return dummy;
+  }
+  return animation->name;
+}
+
+/**
+*
+*/
+bool Mesh::IsFinishAnimation() const
+{
+  if (!file || !animation) {
+    return true;
+  }
+  return animation->totalTime >= frame;
 }
 
 /**
@@ -277,10 +318,18 @@ void Mesh::Update(float deltaTime)
 
   if (animation) {
     frame += deltaTime;
-    if (frame >= animation->totalTime) {
-      frame -= animation->totalTime;
-    } else if (frame < 0) {
-      frame += animation->totalTime;
+    if (isLoop) {
+      if (frame >= animation->totalTime) {
+        frame -= animation->totalTime;
+      } else if (frame < 0) {
+        frame += animation->totalTime;
+      }
+    } else {
+      if (frame >= animation->totalTime) {
+        frame = animation->totalTime;
+      } else if (frame < 0) {
+        frame = 0;
+      }
     }
   }
 
@@ -428,6 +477,23 @@ GLintptr Buffer::AddIndexData(const void* data, size_t size)
 }
 
 /**
+* マテリアルを作成する.
+*
+* @param color   マテリアルの基本色.
+* @param texture マテリアルのテクスチャ.
+*
+* @return 作成したMaterial構造体.
+*/
+Material Buffer::CreateMaterial(const glm::vec4& color, Texture::Image2DPtr texture) const
+{
+  Material m;
+  m.baseColor = color;
+  m.texture = texture;
+  m.program = progStaticMesh;
+  return m;
+}
+
+/**
 * メッシュを追加する.
 *
 * @param data 追加するメッシュデータ.
@@ -439,7 +505,7 @@ void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset
 
   MeshData data;
   data.name = name;
-  data.primitives.push_back(CreatePrimitve(count, type, iOffset, vOffset));
+  data.primitives.push_back(CreatePrimitive(count, type, iOffset, vOffset));
   pFile->meshes.push_back(data);
 
   pFile->materials.resize(1);
@@ -452,6 +518,40 @@ void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset
   files.insert(std::make_pair(pFile->name, pFile));
   meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, &pFile->nodes[0] }));
   std::cout << "Mesh::Buffer: メッシュ'" << name << "'を追加.\n";
+}
+
+/**
+* メッシュを追加する.
+*
+* @param name      メッシュ及びファイルの名前.
+* @param primitive メッシュとして追加するプリミティブ.
+* @param material  プリミティブ用のマテリアル.
+*
+* @retval true  追加成功.
+* @retval false 追加失敗(同名のメッシュが登録済み).
+*/
+bool Buffer::AddMesh(const char* name, const Primitive& primitive, const Material& material)
+{
+  if (files.find(name) != files.end()) {
+    std::cerr << "[警告]" << __func__ << ": " << name <<
+      "という名前は既に追加されています.\n";
+    return false;
+  }
+
+  FilePtr p = std::make_shared<File>();
+  p->name = name;
+  p->materials.push_back(material);
+  p->meshes.resize(1);
+  p->meshes[0].name = name;
+  p->meshes[0].primitives.push_back(primitive);
+
+  p->nodes.resize(1);
+  p->nodes[0].mesh = 0;
+
+  files.insert(std::make_pair(p->name, p));
+  meshes.insert(std::make_pair(p->meshes[0].name, MeshIndex{ p, &p->nodes[0] }));
+  std::cout << "[情報]" << __func__ << ": メッシュ'" << name << "'を追加.\n";
+  return true;
 }
 
 /**

@@ -149,14 +149,17 @@ struct MeshTransformation {
 * 描画方法:
 * - Mesh::Drawで描画.
 */
-struct alignas(16) Mesh
+struct Mesh
 {
   Mesh() = default;
   Mesh(Buffer* p, const FilePtr& f, const Node* n) : parent(p), file(f), node(n) {}
   void Draw() const;
   void Update(float deltaTime);
   void SetAnimation(int);
+  void SetAnimation(const char*);
   int GetAnimation() const;
+  const std::string& GetAnimationName() const;
+  bool IsFinishAnimation() const;
   size_t GetAnimationCount() const;
   MeshTransformation CalculateTransform() const;
 
@@ -180,6 +183,7 @@ struct alignas(16) Mesh
   glm::aligned_vec4 color = glm::vec4(1);
 
   float frame = 0;
+  bool isLoop = true;
 
   Shader::ProgramPtr program;
   GLintptr uboOffset = 0;
@@ -187,7 +191,7 @@ struct alignas(16) Mesh
 };
 
 /**
-* メッシュ描画用UBOデータ.
+* スケルタル・メッシュ描画用UBOデータ.
 */
 struct alignas(256) UniformDataMeshMatrix
 {
@@ -219,7 +223,10 @@ public:
   bool Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize);
   GLintptr AddVertexData(const void* data, size_t size);
   GLintptr AddIndexData(const void* data, size_t size);
+  Primitive CreatePrimitive(size_t count, GLenum type, size_t iOffset, size_t vOffset) const;
+  Material CreateMaterial(const glm::vec4& color, Texture::Image2DPtr texture) const;
   void AddMesh(const char* name, size_t count, GLenum type, size_t iOffset, size_t vOffset);
+  bool AddMesh(const char* name, const Primitive& primitive, const Material& material);
   bool LoadMesh(const char* path);
   MeshPtr GetMesh(const char* meshName) const;
   void Bind();
@@ -254,7 +261,6 @@ private:
   UniformBufferPtr ubo[2];
   std::vector<uint8_t> uboData;
 
-  Primitive CreatePrimitve(size_t count, GLenum type, size_t iOffset, size_t vOffset) const;
   bool SetAttribute(
     Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);
 };
