@@ -32,12 +32,23 @@ private:
   Mesh::MeshPtr meshCircle;
   std::vector<Mesh::MeshPtr> meshTrees;
   std::vector<Mesh::MeshPtr> meshEnemies;
+  Mesh::MeshPtr meshFarmersHouse;
+  std::vector<Mesh::MeshPtr> meshWeeds;
+
   Shader::ProgramPtr progMesh;
   Shader::ProgramPtr progSkeletalMesh;
+
   Terrain::HeightMap heightMap;
+
   Texture::Image2DPtr texTerrain;
   Texture::Image2DPtr texTree;
   Texture::Image2DPtr texOniSmall;
+  Texture::Image2DPtr texPlayer;
+  Texture::Image2DPtr texFarmersHouse;
+  Texture::Image2DPtr texPineTree;
+  Texture::Image2DPtr texWeed;
+
+  float actionWaitTimer = 0;
   glm::vec3 pos = glm::vec3(0, 10, 10);
   glm::vec3 dir = glm::vec3(0, 0, -1);
   glm::vec2 prevMousePos = glm::vec2(0, 0);
