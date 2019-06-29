@@ -3,9 +3,9 @@
         {
             "bufferView" : 0,
             "componentType" : 5123,
-            "count" : 366,
+            "count" : 564,
             "max" : [
-                169
+                239
             ],
             "min" : [
                 0
@@ -15,23 +15,23 @@
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 170,
+            "count" : 240,
             "max" : [
-                2.6339879035949707,
-                3.929999828338623,
-                2.1223623752593994
+                2.872828245162964,
+                4.421249866485596,
+                2.5803048610687256
             ],
             "min" : [
-                -2.6339874267578125,
-                -1.0,
-                -2.1223621368408203
+                -2.8728275299072266,
+                -1.125,
+                -2.580303907394409
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 170,
+            "count" : 240,
             "max" : [
                 1.0,
                 1.0,
@@ -47,17 +47,17 @@
         {
             "bufferView" : 3,
             "componentType" : 5126,
-            "count" : 170,
+            "count" : 240,
             "max" : [
-                0.9750061631202698,
                 1.0,
-                0.9995231628417969,
+                1.0,
+                0.9201655983924866,
                 1.0
             ],
             "min" : [
-                -0.9571412801742554,
-                -0.9891009330749512,
-                -0.9995231628417969,
+                -0.6153526306152344,
+                -0.9902307391166687,
+                -1.0,
                 1.0
             ],
             "type" : "VEC4"
@@ -65,14 +65,14 @@
         {
             "bufferView" : 4,
             "componentType" : 5126,
-            "count" : 170,
+            "count" : 240,
             "max" : [
-                0.9986023306846619,
-                0.9978558255825192
+                0.9975668787956238,
+                0.9975742846727371
             ],
             "min" : [
-                0.0021441744174808264,
-                0.009728074073791504
+                0.0009982120245695114,
+                0.0029433369636535645
             ],
             "type" : "VEC2"
         }
@@ -84,39 +84,45 @@
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 732,
+            "byteLength" : 1128,
             "byteOffset" : 0,
             "target" : 34963
         },
         {
             "buffer" : 0,
-            "byteLength" : 2040,
-            "byteOffset" : 732,
+            "byteLength" : 2880,
+            "byteOffset" : 1128,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 2040,
-            "byteOffset" : 2772,
+            "byteLength" : 2880,
+            "byteOffset" : 4008,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 2720,
-            "byteOffset" : 4812,
+            "byteLength" : 3840,
+            "byteOffset" : 6888,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 1360,
-            "byteOffset" : 7532,
+            "byteLength" : 1920,
+            "byteOffset" : 10728,
             "target" : 34962
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 8892,
+            "byteLength" : 12648,
             "uri" : "farmers_house.bin"
+        }
+    ],
+    "images" : [
+        {
+            "name" : "farmers_house",
+            "uri" : "farmers_house.png"
         }
     ],
     "materials" : [
@@ -129,6 +135,9 @@
                     0.6400000190734865,
                     1.0
                 ],
+                "baseColorTexture" : {
+                    "index" : 0
+                },
                 "metallicFactor" : 0.0
             }
         }
@@ -189,6 +198,9 @@
             ]
         }
     ],
+    "samplers" : [
+        {}
+    ],
     "scene" : 0,
     "scenes" : [
         {
@@ -198,6 +210,12 @@
                 2,
                 0
             ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
         }
     ]
 }
