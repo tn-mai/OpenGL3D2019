@@ -350,6 +350,7 @@ bool LoadBMP(const char* filename, std::basic_ifstream<uint8_t>& ifs, size_t fil
   } else if (bitCount == 16) {
     type = GL_UNSIGNED_SHORT_1_5_5_5_REV;
   }
+  imageData.name = filename;
   imageData.width = width;
   imageData.height = height;
   imageData.format = format;
@@ -425,6 +426,7 @@ bool LoadTGA(const char* path, std::basic_ifstream<uint8_t>& ifs, size_t fileSiz
   } else if (tgaHeader[16] == 16) {
     type = GL_UNSIGNED_SHORT_1_5_5_5_REV;
   }
+  imageData.name = path;
   imageData.width = width;
   imageData.height = height;
   imageData.type = type;
@@ -622,6 +624,7 @@ Image2D::Image2D(const char* path)
 {
   id = LoadImage2D(path);
   if (id) {
+    name = path;
     const GLenum target = Target();
     glBindTexture(target, id);
     glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, &width);

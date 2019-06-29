@@ -7,6 +7,7 @@
 #include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace Texture {
 
@@ -21,6 +22,7 @@ public:
   glm::vec4 GetColor(int x, int y) const;
 
 public:
+  std::string name; ///< ファイル名.
   GLint width = 0; ///< 横のピクセル数.
   GLint height = 0; ///< 縦のピクセル数.
   GLenum format = GL_NONE; ///< どの色情報が記録されているか.
@@ -42,6 +44,7 @@ public:
 
   ~Image2D();
   bool IsNull() const;
+  const std::string& Name() const { return name; }
   GLint Width() const { return width; }
   GLint Height() const { return height; }
   GLuint Id() const { return id; }
@@ -53,6 +56,7 @@ private:
   Image2D() = default;
   explicit Image2D(const char*);
 
+  std::string name; ///< テクスチャファイル名.
   GLuint id = 0;
   GLint width = 0;
   GLint height = 0;
