@@ -508,8 +508,7 @@ void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset
   data.primitives.push_back(CreatePrimitive(count, type, iOffset, vOffset));
   pFile->meshes.push_back(data);
 
-  pFile->materials.resize(1);
-  pFile->materials[0].baseColor = glm::vec4(1);
+  pFile->materials.push_back(CreateMaterial(glm::vec4(1), nullptr));
   pFile->nodes.resize(1);
   pFile->nodes[0].mesh = 0;
   if (files.find(name) != files.end()) {
@@ -1069,25 +1068,29 @@ bool Buffer::LoadMesh(const char* path)
     const std::vector<json11::Json> materials = json["materials"].array_items();
     file.materials.reserve(materials.size());
     for (const auto& material : materials) {
-      Material m;
+      std::string texturePath;
       const json11::Json& index = material["pbrMetallicRoughness"]["baseColorTexture"]["index"];
       if (index.is_number()) {
         const int textureId = index.int_value();
         const json11::Json& texture = json["textures"][textureId];
         const int imageSourceId = texture["source"].int_value();
-        const json11::Json& imageUri = json["images"][imageSourceId]["uri"];
-        if (imageUri.is_string()) {
-          const std::string str = std::string("Res/") + imageUri.string_value();
-          m.texture = Texture::Image2D::Create(str.c_str());
+        const json11::Json& imageName = json["images"][imageSourceId]["name"];
+        if (imageName.is_string()) {
+          texturePath = std::string("Res/") + imageName.string_value() + std::string(".tga");
         }
       }
+      glm::vec4 col(0, 0, 0, 1);
       const std::vector<json11::Json>& baseColorFactor = material["pbrMetallicRoughness"]["baseColorFactor"].array_items();
       if (baseColorFactor.size() >= 4) {
         for (size_t i = 0; i < 4; ++i) {
-          m.baseColor[i] = static_cast<float>(baseColorFactor[i].number_value());
+          col[i] = static_cast<float>(baseColorFactor[i].number_value());
         }
       }
-      file.materials.push_back(m);
+      Texture::Image2DPtr tex;
+      if (!texturePath.empty()) {
+        tex = Texture::Image2D::Create(texturePath.c_str());
+      }
+      file.materials.push_back(CreateMaterial(col, tex));
     }
   }
 
