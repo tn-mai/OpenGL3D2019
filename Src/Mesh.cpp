@@ -3,6 +3,7 @@
 */
 #define NOMINMAX
 #include "Mesh.h"
+#include "SkeletalMesh.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -120,192 +121,6 @@ size_t Mesh::GetAnimationCount() const
 }
 
 /**
-*
-*/
-void GetMeshNodeList(const Node* node, std::vector<const Node*>& list)
-{
-  if (node->mesh >= 0) {
-    list.push_back(node);
-  }
-  for (const auto& child : node->children) {
-    GetMeshNodeList(child, list);
-  }
-}
-
-/**
-*
-*/
-glm::aligned_mat4 DecomposeRotation(const glm::aligned_mat4& m)
-{
-  glm::aligned_vec3 scale;
-  scale.x = 1.0f / glm::length(glm::aligned_vec3(m[0]));
-  scale.y = 1.0f / glm::length(glm::aligned_vec3(m[1]));
-  scale.z = 1.0f / glm::length(glm::aligned_vec3(m[2]));
-
-  return glm::aligned_mat3(glm::scale(m, scale));
-}
-
-/**
-*
-*/
-template<typename T>
-T Interporation(const Timeline<T>& data, float frame)
-{
-  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
-    [](const KeyFrame<T>& keyFrame, float frame) { return keyFrame.frame < frame; });
-  if (maxFrame == data.timeline.begin()) {
-    return data.timeline.front().value;
-  }
-  if (maxFrame == data.timeline.end()) {
-    return data.timeline.back().value;
-  }
-  const auto minFrame = maxFrame - 1;
-  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
-  return glm::mix(minFrame->value, maxFrame->value, ratio);
-}
-
-/**
-*
-*/
-template<typename T, glm::qualifier Q>
-glm::qua<T, Q> Interporation(const Timeline<glm::qua<T, Q> >& data, float frame)
-{
-  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
-    [](const KeyFrame<glm::qua<T, Q>>& keyFrame, float frame) { return keyFrame.frame < frame; });
-  if (maxFrame == data.timeline.begin()) {
-    return data.timeline.front().value;
-  }
-  if (maxFrame == data.timeline.end()) {
-    return data.timeline.back().value;
-  }
-  const auto minFrame = maxFrame - 1;
-  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
-  return glm::slerp(minFrame->value, maxFrame->value, ratio);
-}
-
-struct AnimatedNodeTree {
-  struct Transformation {
-    glm::aligned_vec3 translation = glm::aligned_vec3(0);
-    glm::aligned_quat rotation = glm::aligned_quat(0, 0, 0, 1);
-    glm::aligned_vec3 scale = glm::aligned_vec3(1);
-    glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
-    glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
-    bool isCalculated = false;
-    bool hasTransformation = false;
-  };
-  std::vector<Transformation> nodeTransformations;
-};
-
-/**
-*
-*/
-void CalcGlobalTransform(const std::vector<Node>& nodes, const Node& node, AnimatedNodeTree& animated)
-{
-  const int currentNodeId = &node - &nodes[0];
-  AnimatedNodeTree::Transformation& transformation = animated.nodeTransformations[currentNodeId];
-  if (transformation.isCalculated) {
-    return;
-  }
-
-  if (node.parent) {
-    CalcGlobalTransform(nodes, *node.parent, animated);
-    const int parentNodeId = node.parent - &nodes[0];
-    transformation.matLocal = animated.nodeTransformations[parentNodeId].matLocal;
-  } else {
-    transformation.matLocal = glm::aligned_mat4(1);
-  }
-  if (transformation.hasTransformation) {
-    const glm::aligned_mat4 T = glm::translate(glm::aligned_mat4(1), transformation.translation);
-    const glm::aligned_mat4 R = glm::mat4_cast(transformation.rotation);
-    const glm::aligned_mat4 S = glm::scale(glm::aligned_mat4(1), transformation.scale);
-    transformation.matLocal *= T * R * S;
-  } else {
-    transformation.matLocal *= node.matLocal;
-  }
-  transformation.matGlobal = transformation.matLocal * node.matInverseBindPose;
-  transformation.isCalculated = true;
-}
-
-/**
-* アニメーション補間された座標変換行列を計算する.
-*/
-AnimatedNodeTree MakeAnimatedNodeTree(const File& file, const Animation& animation, float keyFrame)
-{
-  AnimatedNodeTree tmp;
-  tmp.nodeTransformations.resize(file.nodes.size());
-  for (const auto& e : animation.scaleList) {
-    tmp.nodeTransformations[e.targetNodeId].scale = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
-  }
-  for (const auto& e : animation.rotationList) {
-    tmp.nodeTransformations[e.targetNodeId].rotation = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
-  }
-  for (const auto& e : animation.translationList) {
-    tmp.nodeTransformations[e.targetNodeId].translation = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
-  }
-  for (auto& e : file.nodes) {
-    CalcGlobalTransform(file.nodes, e, tmp);
-  }
-  return tmp;
-}
-
-/**
-*
-*/
-MeshTransformation Mesh::CalculateTransform() const
-{
-  MeshTransformation transformation;
-  if (file && node) {
-    std::vector<const Node*> meshNodes;
-    meshNodes.reserve(32);
-    GetMeshNodeList(node, meshNodes);
-
-    if (animation) {
-      const AnimatedNodeTree tmp = MakeAnimatedNodeTree(*file, *animation, frame);
-      if (node->skin >= 0) {
-        const std::vector<int>& joints = file->skins[node->skin].joints;
-        transformation.transformations.resize(joints.size());
-        for (size_t i = 0; i < joints.size(); ++i) {
-          const int jointNodeId = joints[i];
-          transformation.transformations[i] = tmp.nodeTransformations[jointNodeId].matGlobal;
-        }
-        transformation.matRoot.resize(meshNodes.size(), glm::mat4(1));
-      } else {
-        transformation.matRoot.reserve(meshNodes.size());
-        for (const auto& e : meshNodes) {
-          const size_t nodeId = e - &file->nodes[0];
-          transformation.matRoot.push_back(tmp.nodeTransformations[nodeId].matGlobal);
-        }
-      }
-    }
-    
-    if (node->skin >= 0) {
-      if (animation) {
-        const AnimatedNodeTree tmp = MakeAnimatedNodeTree(*file, *animation, frame);
-        const std::vector<int>& joints = file->skins[node->skin].joints;
-        transformation.transformations.resize(joints.size());
-        for (size_t i = 0; i < joints.size(); ++i) {
-          const int jointNodeId = joints[i];
-          transformation.transformations[i] = tmp.nodeTransformations[jointNodeId].matGlobal;
-        }
-      } else {
-        const std::vector<int>& joints = file->skins[node->skin].joints;
-        transformation.transformations.resize(joints.size(), glm::mat4(1));
-      }
-      transformation.matRoot.resize(meshNodes.size(), glm::mat4(1));
-    } else {
-      transformation.matRoot.reserve(meshNodes.size());
-      for (const auto& e : meshNodes) {
-        transformation.matRoot.push_back(e->matGlobal);
-      }
-    }
-  }
-  return transformation;
-}
-
-/**
 * メッシュの状態を更新する.
 *
 * @param deltaTime 前回の更新からの経過時間(秒).
@@ -333,27 +148,29 @@ void Mesh::Update(float deltaTime)
     }
   }
 
-  UniformDataMeshMatrix uboData;
-  uboData.color = color;
-  const MeshTransformation mt = CalculateTransform();
-  for (size_t i = 0; i < mt.transformations.size(); ++i) {
-    uboData.matBones[i] = glm::transpose(mt.transformations[i]);
+  if (node && node->skin >= 0) {
+    UniformDataMeshMatrix uboData;
+    uboData.color = color;
+    const MeshTransformation mt = CalculateTransform(file, node, animation, frame);
+    for (size_t i = 0; i < mt.transformations.size(); ++i) {
+      uboData.matBones[i] = glm::transpose(mt.transformations[i]);
+    }
+    const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
+    const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
+    const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
+    const glm::aligned_mat4 matTRS = matT * matR * matS;
+    for (size_t i = 0; i < mt.matRoot.size(); ++i) {
+      uboData.matModel[i] = glm::transpose(matTRS * mt.matRoot[i]);
+      uboData.matNormal[i] = matR * DecomposeRotation(mt.matRoot[i]);
+    }
+    if (mt.matRoot.empty()) {
+      uboData.matModel[0] = glm::transpose(matTRS);
+      uboData.matNormal[0] = matR;
+    }
+    uboSize = sizeof(glm::aligned_vec4) + sizeof(glm::aligned_mat3x4) * 8 + sizeof(glm::aligned_mat3x4) * mt.transformations.size();
+    uboSize = ((uboSize + 255) / 256) * 256;
+    uboOffset = GlobalSkeletalMeshState::PushUniformData(&uboData, uboSize);
   }
-  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
-  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
-  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
-  const glm::aligned_mat4 matTRS = matT * matR * matS;
-  for (size_t i = 0; i < mt.matRoot.size(); ++i) {
-    uboData.matModel[i] = glm::transpose(matTRS * mt.matRoot[i]);
-    uboData.matNormal[i] = matR * DecomposeRotation(mt.matRoot[i]);
-  }
-  if (mt.matRoot.empty()) {
-    uboData.matModel[0] = glm::transpose(matTRS);
-    uboData.matNormal[0] = matR;
-  }
-  uboSize = sizeof(glm::aligned_vec4) + sizeof(glm::aligned_mat3x4) * 8 + sizeof(glm::aligned_mat3x4) * mt.transformations.size();
-  uboSize = ((uboSize + 255) / 256) * 256;
-  uboOffset = parent->PushUniformData(&uboData, uboSize);
 }
 
 /**
@@ -363,7 +180,7 @@ void Mesh::Update(float deltaTime)
 */
 void Mesh::Draw() const
 {
-  if (!file) {
+  if (!file || !node) {
     return;
   }
 
@@ -372,7 +189,12 @@ void Mesh::Draw() const
   //meshNodes.reserve(32);
   //GetMeshNodeList(node, meshNodes);
 
-  parent->BindUniformData(uboOffset, uboSize);
+  GlobalSkeletalMeshState::BindUniformData(uboOffset, uboSize);
+
+  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
+  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
+  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
+  const glm::aligned_mat4 matModel = matT * matR * matS;
 
   const MeshData& meshData = file->meshes[node->mesh];
   GLuint prevTexId = 0;
@@ -385,11 +207,16 @@ void Mesh::Draw() const
 
     if (prim.material >= 0 && prim.material < static_cast<int>(file->materials.size())) {
       const Material& m = file->materials[prim.material];
-      if (m.texture) {
-        const GLuint texId = m.texture->Id();
-        if (prevTexId != texId) {
-          m.texture->Bind(0);
-          prevTexId = texId;
+      if (node->skin < 0) {
+        m.program->Use();
+        m.program->SetModelMatrix(matModel);
+
+        if (m.texture) {
+          const GLuint texId = m.texture->Id();
+          if (prevTexId != texId) {
+            m.texture->Bind(0);
+            prevTexId = texId;
+          }
         }
       }
       //program->SetMaterialColor(m.baseColor);
@@ -398,7 +225,7 @@ void Mesh::Draw() const
     prim.vao->Unbind();
   }
 }
-  
+
 /**
 * メッシュバッファを初期化する.
 *
@@ -429,15 +256,11 @@ bool Buffer::Init(GLsizeiptr vboSize, GLsizeiptr iboSize, GLsizeiptr uboSize)
   iboEnd = 0;
   meshes.reserve(100);
 
-  static const char UniformNameForSkeletalMeshMatrix[] = "MeshMatrixUniformData";
-  ubo[0] = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
-  ubo[1] = UniformBuffer::Create(uboSize, 0, UniformNameForSkeletalMeshMatrix);
-  uboData.reserve(uboSize);
-
   Shader::Cache& shaderCache = Shader::Cache::Instance();
   progStaticMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
   progSkeletalMesh = shaderCache.Create("Res/SkeletalMesh.vert", "Res/SkeletalMesh.frag");
-  progSkeletalMesh->BindUniformBlock(UniformNameForSkeletalMeshMatrix, 0);
+
+  GlobalSkeletalMeshState::BindUniformBlock(progSkeletalMesh);
 
   return true;
 }
@@ -490,6 +313,7 @@ Material Buffer::CreateMaterial(const glm::vec4& color, Texture::Image2DPtr text
   m.baseColor = color;
   m.texture = texture;
   m.program = progStaticMesh;
+  m.progSkeletalMesh = progSkeletalMesh;
   return m;
 }
 
@@ -567,12 +391,27 @@ MeshPtr Buffer::GetMesh(const char* meshName) const
     static MeshPtr dummy(std::make_shared<Mesh>());
     return dummy;
   }
-  MeshPtr p(std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node));
-  if (p->node->skin >= 0) {
-    p->program = progSkeletalMesh;
-  } else {
-    p->program = progStaticMesh;
+  return std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node);
+}
+
+/**
+* スケルタルメッシュを取得する.
+*
+* @param meshName 取得したいスケルタルメッシュの名前.
+*
+* @return meshNameと同じ名前を持つスケルタルメッシュ.
+*/
+SkeletalMeshPtr Buffer::GetSkeletalMesh(const char* meshName) const
+{
+  const auto itr = meshes.find(meshName);
+  if (itr == meshes.end()) {
+    static SkeletalMeshPtr dummy(std::make_shared<SkeletalMesh>());
+    return dummy;
   }
+
+  FilePtr pFile = itr->second.file;
+  const Node* pNode = itr->second.node;
+  SkeletalMeshPtr p(std::make_shared<SkeletalMesh>(const_cast<Buffer*>(this), pFile, pNode));
   return p;
 }
 
@@ -1286,47 +1125,19 @@ bool Buffer::LoadMesh(const char* path)
 }
 
 /**
+* シェーダにビュー・プロジェクション行列を設定する.
 *
-*/
-void Buffer::ResetUniformData()
-{
-  uboData.clear();
-}
-
-/**
+* @param matVP ビュー・プロジェクション行列.
 *
+* @note こういう処理はUBOで共有するとかのほうがよい設計だと思う.
 */
-GLintptr Buffer::PushUniformData(const void* data, size_t size)
+void Buffer::SetViewProjectionMatrix(const glm::mat4& matVP) const
 {
-  UniformBufferPtr pUbo = ubo[currentUboIndex];
-  if (uboData.size() + size >= static_cast<size_t>(pUbo->Size())) {
-    return -1;
-  }
-  const uint8_t* p = static_cast<const uint8_t*>(data);
-  const GLintptr offset = static_cast<GLintptr>(uboData.size());
-  uboData.insert(uboData.end(), p, p + size);
-  uboData.resize(((uboData.size() + 255) / 256) * 256);
-  return offset;
-}
-
-/**
-*
-*/
-void Buffer::UploadUniformData()
-{
-  if (!uboData.empty()) {
-    UniformBufferPtr pUbo = ubo[currentUboIndex];
-    pUbo->BufferSubData(uboData.data(), 0, uboData.size());
-    currentUboIndex = !currentUboIndex;
-  }
-}
-
-/**
-*
-*/
-void Buffer::BindUniformData(GLintptr offset, GLsizeiptr size)
-{
-  ubo[!currentUboIndex]->BindBufferRange(offset, size);
+  progStaticMesh->Use();
+  progStaticMesh->SetViewProjectionMatrix(matVP);
+  progSkeletalMesh->Use();
+  progSkeletalMesh->SetViewProjectionMatrix(matVP);
+  progSkeletalMesh->Unuse();
 }
 
 } // namespace Mesh

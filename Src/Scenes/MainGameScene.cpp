@@ -47,21 +47,15 @@ bool MainGameScene::Initialize()
   fontRenderer.Init(1000);
   fontRenderer.LoadFromFile("Res/font.fnt");
 
-  meshBuffer.Init(sizeof(Mesh::Vertex) * 1'000'000, sizeof(GLushort) * 3'000'000, sizeof(Mesh::UniformDataMeshMatrix) * 100);
+  meshBuffer.Init(sizeof(Mesh::Vertex) * 1'000'000, sizeof(GLushort) * 3'000'000, 1024);
   meshBuffer.CreateCircle("Circle", 8);
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
-  heightMap.CreateMesh(meshBuffer, "Terrain");
-  texTerrain = Texture::Image2D::Create("Res/ColorMap.tga");
-  texTree = Texture::Image2D::Create("Res/TestTree.tga");
+  heightMap.CreateMesh(meshBuffer, "Terrain", "Res/ColorMap.tga");
   texOniSmall = Texture::Image2D::Create("Res/oni_s_albedo.tga");
   texPlayer = Texture::Image2D::Create("Res/bikuni_albedo.tga");
-  texPineTree = Texture::Image2D::Create("Res/red_pine_tree.tga");
-  texFarmersHouse = Texture::Image2D::Create("Res/farmers_house.tga");
-  texWeed = Texture::Image2D::Create("Res/weed_collection.tga");
 
-  meshBuffer.LoadMesh("Res/bikuni_ver2.gltf");
-  meshBuffer.LoadMesh("Res/TestTree.gltf");
   meshBuffer.LoadMesh("Res/oni_small.gltf");
+  meshBuffer.LoadMesh("Res/bikuni_ver2.gltf");
   meshBuffer.LoadMesh("Res/weed_collection.gltf");
   meshBuffer.LoadMesh("Res/red_pine_tree.gltf");
   meshBuffer.LoadMesh("Res/farmers_house.gltf");
@@ -69,6 +63,10 @@ bool MainGameScene::Initialize()
   meshPlayer->SetAnimation("Idle");
   meshTerrain = meshBuffer.GetMesh("Terrain");
   meshCircle = meshBuffer.GetMesh("Circle");
+
+  // SkeletalMeshクラスのテストコード.
+  skeletalMeshTest = meshBuffer.GetSkeletalMesh("Bikuni");
+  skeletalMeshTest->Play("Idle");
 
   glm::vec3 startPos(100, 0, 150);
   startPos.y = heightMap.Height(startPos);
@@ -222,12 +220,12 @@ void MainGameScene::ProcessInput()
 *
 * @param deltaTime  前回の更新からの経過時間(秒).
 *
-* TODO: 地面の上を移動.
+* TODO: 地面の上を移動...ok
 * TODO: ジャンプ動作.
 * TODO: 攻撃動作と攻撃判定.
 * TODO: 敵の出現.
 * TODO: 敵の思考.
-* TODO: 木を植える.
+* TODO: 木を植える...ok
 * TODO: 村人と会話.
 * TODO: ボス.
 * TODO: 法力.
@@ -249,7 +247,6 @@ void MainGameScene::Update(float deltaTime)
     actionWaitTimer -= deltaTime;
   }
 
-  meshBuffer.ResetUniformData();
   meshPlayer->Update(deltaTime);
   meshTerrain->Update(deltaTime);
   meshCircle->Update(deltaTime);
@@ -264,7 +261,13 @@ void MainGameScene::Update(float deltaTime)
     e->Update(deltaTime);
   }
 
-  meshBuffer.UploadUniformData();
+  // SkeletalMeshクラスのテストコード.
+  {
+    glm::vec3 pos(120, 0, 160);
+    pos.y = heightMap.Height(pos);
+    const glm::mat4 matModel = translate(glm::mat4(1), pos);
+    skeletalMeshTest->Update(deltaTime, matModel, glm::vec4(1.5f, 0.5f, 0.5f, 1.0f));
+  }
 }
 
 /**
@@ -277,47 +280,34 @@ void MainGameScene::Render()
   glm::mat4 matView;
   if (window.KeyPressed(GLFW_KEY_SPACE)) {
     const glm::aligned_vec3 front = glm::aligned_mat3(meshPlayer->rotation) * glm::aligned_vec3(0, 0, 1);
-    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 2, 0);
-    matView = glm::lookAt(cameraPos, meshPlayer->translation + front * 5.0f, glm::aligned_vec3(0, 1, 0));
+    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 1.3f, 0);
+    matView = glm::lookAt(cameraPos, cameraPos + front * 5.0f, glm::aligned_vec3(0, 1, 0));
   } else {
     const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 50, 50);// *0.25f;
     matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::aligned_vec3(0, 1.25f, 0), glm::aligned_vec3(0, 1, 0));
   }
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
-  const glm::mat4 matModel = glm::scale(glm::mat4(1), glm::vec3(1));
 
   meshBuffer.Bind();
+  meshBuffer.SetViewProjectionMatrix(matProj * matView);
 
   {
-    progMesh->Use();
-
     glEnable(GL_CULL_FACE);
 
-    progMesh->SetViewProjectionMatrix(matProj * matView * matModel);
-    texTerrain->Bind(0);
-    const GLint locMeshIndex = progMesh->GetUniformLocation("meshIndex");
-    if (locMeshIndex > 0) {
-      progMesh->SetUniformInt(locMeshIndex, 0);
-    }
     meshTerrain->Draw();
     meshCircle->Draw();
 
-    texFarmersHouse->Bind(0);
     meshFarmersHouse->Draw();
 
     glDisable(GL_CULL_FACE);
 
-    texPineTree->Bind(0);
     for (const auto& e : meshTrees) {
       e->Draw();
     }
-    texWeed->Bind(0);
     for (const auto& e : meshWeeds) {
       e->Draw();
     }
-
-    progMesh->Unuse();
   }
 
   {
@@ -325,7 +315,6 @@ void MainGameScene::Render()
 
     progSkeletalMesh->Use();
 
-    progSkeletalMesh->SetViewProjectionMatrix(matProj * matView);
     const GLint locMeshIndex = progSkeletalMesh->GetUniformLocation("meshIndex");
     if (locMeshIndex > 0) {
       progSkeletalMesh->SetUniformInt(locMeshIndex, 0);
@@ -341,7 +330,9 @@ void MainGameScene::Render()
     progSkeletalMesh->Unuse();
   }
 
-  texTerrain->Unbind(0);
+  // SkeletalMeshクラスのテストコード.
+  skeletalMeshTest->Draw();
+
   meshBuffer.Unbind();
 
   const glm::vec2 screenSize(window.Width(), window.Height());

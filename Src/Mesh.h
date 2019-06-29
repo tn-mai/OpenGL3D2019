@@ -28,6 +28,8 @@ class Buffer;
 using BufferPtr = std::shared_ptr<Buffer>;
 struct Mesh;
 using MeshPtr = std::shared_ptr<Mesh>;
+class SkeletalMesh;
+using SkeletalMeshPtr = std::shared_ptr<SkeletalMesh>;
 
 // 頂点データ.
 struct Vertex
@@ -45,6 +47,7 @@ struct Material {
   glm::vec4 baseColor = glm::vec4(1);
   Texture::Image2DPtr texture;
   Shader::ProgramPtr program;
+  Shader::ProgramPtr progSkeletalMesh;
 };
 
 // メッシュプリミティブ.
@@ -161,7 +164,6 @@ struct Mesh
   const std::string& GetAnimationName() const;
   bool IsFinishAnimation() const;
   size_t GetAnimationCount() const;
-  MeshTransformation CalculateTransform() const;
 
   std::string name;
 
@@ -185,20 +187,8 @@ struct Mesh
   float frame = 0;
   bool isLoop = true;
 
-  Shader::ProgramPtr program;
   GLintptr uboOffset = 0;
   GLsizeiptr uboSize = 0;
-};
-
-/**
-* スケルタル・メッシュ描画用UBOデータ.
-*/
-struct alignas(256) UniformDataMeshMatrix
-{
-  glm::aligned_vec4 color;
-  glm::aligned_mat3x4 matModel[4]; // it must transpose.
-  glm::aligned_mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
-  glm::aligned_mat3x4 matBones[256]; // it must transpose.
 };
 
 /**
@@ -229,17 +219,15 @@ public:
   bool AddMesh(const char* name, const Primitive& primitive, const Material& material);
   bool LoadMesh(const char* path);
   MeshPtr GetMesh(const char* meshName) const;
+  SkeletalMeshPtr GetSkeletalMesh(const char* meshName) const;
   void Bind();
   void Unbind();
+
+  void SetViewProjectionMatrix(const glm::mat4&) const;
 
   void CreateCube(const char* name);
   void CreateCircle(const char* name, size_t segments);
   void CreateSphere(const char* name, size_t segments, size_t rings);
-
-  void ResetUniformData();
-  GLintptr PushUniformData(const void* data, size_t size);
-  void UploadUniformData();
-  void BindUniformData(GLintptr offset, GLsizeiptr size);
 
 private:
   BufferObject vbo;
@@ -256,10 +244,6 @@ private:
 
   Shader::ProgramPtr progStaticMesh;
   Shader::ProgramPtr progSkeletalMesh;
-
-  int currentUboIndex = 0;
-  UniformBufferPtr ubo[2];
-  std::vector<uint8_t> uboData;
 
   bool SetAttribute(
     Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);

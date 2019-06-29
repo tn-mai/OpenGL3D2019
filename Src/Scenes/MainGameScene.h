@@ -5,6 +5,7 @@
 #define MAINGAMESCENE_H_INCLUDED
 #include "../Scene.h"
 #include "../Mesh.h"
+#include "../SkeletalMesh.h"
 #include "../Texture.h"
 #include "../Shader.h"
 #include "../Font.h"
@@ -34,19 +35,15 @@ private:
   std::vector<Mesh::MeshPtr> meshEnemies;
   Mesh::MeshPtr meshFarmersHouse;
   std::vector<Mesh::MeshPtr> meshWeeds;
+  Mesh::SkeletalMeshPtr skeletalMeshTest;
 
   Shader::ProgramPtr progMesh;
   Shader::ProgramPtr progSkeletalMesh;
 
   Terrain::HeightMap heightMap;
 
-  Texture::Image2DPtr texTerrain;
-  Texture::Image2DPtr texTree;
   Texture::Image2DPtr texOniSmall;
   Texture::Image2DPtr texPlayer;
-  Texture::Image2DPtr texFarmersHouse;
-  Texture::Image2DPtr texPineTree;
-  Texture::Image2DPtr texWeed;
 
   float actionWaitTimer = 0;
   glm::vec3 pos = glm::vec3(0, 10, 10);

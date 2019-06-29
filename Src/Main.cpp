@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include "GLFWEW.h"
 #include "Scenes/TitleScene.h"
+#include "SkeletalMesh.h"
 #include <iostream>
 
 /**
@@ -15,6 +16,8 @@ int main()
   if (!window.Init(1280, 720, "OpenGL 3D 2019")) {
     return 1;
   }
+
+  Mesh::GlobalSkeletalMeshState::Initialize();
 
   SceneStack& sceneStack = SceneStack::Instance();
   sceneStack.Push(std::make_shared<TitleScene>());
@@ -28,7 +31,11 @@ int main()
       }
     }
 
+    Mesh::GlobalSkeletalMeshState::ResetUniformData();
+
     sceneStack.Update(static_cast<float>(window.DeltaTime()));
+
+    Mesh::GlobalSkeletalMeshState::UploadUniformData();
 
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -39,4 +46,6 @@ int main()
 
     window.SwapBuffers();
   }
+
+  Mesh::GlobalSkeletalMeshState::Finalize();
 }
