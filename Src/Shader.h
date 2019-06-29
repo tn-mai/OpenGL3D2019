@@ -31,11 +31,13 @@ public:
   bool BindUniformBlock(const char* blockName, GLuint bindingPoint);
   GLint GetUniformLocation(const char* uniformName) const;
   void SetUniformInt(GLint location, GLint value) const;
+  GLuint Id() const { return id; }
 
 private:
   GLuint id = 0; // ÉvÉçÉOÉâÉÄID.
   GLint locMatVP = -1;
   GLint locMatModel = -1;
+  GLint locMatNormal = -1;
 };
 using ProgramPtr = std::shared_ptr<Program>;
 

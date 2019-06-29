@@ -136,6 +136,7 @@ Program::Program(const char* vsPath, const char* fsPath)
   if (id) {
     locMatVP = glGetUniformLocation(id, "matVP");
     locMatModel = glGetUniformLocation(id, "matModel");
+    locMatNormal = glGetUniformLocation(id, "matNormal");
   }
 }
 
@@ -197,6 +198,10 @@ void Program::SetModelMatrix(const glm::mat4& m) const
 {
   if (locMatModel >= 0) {
     glUniformMatrix4fv(locMatModel, 1, GL_FALSE, &m[0][0]);
+  }
+  if (locMatNormal >= 0) {
+    const glm::mat3 matNormal = glm::transpose(glm::inverse(glm::mat3(m)));
+    glUniformMatrix3fv(locMatNormal, 1, GL_FALSE, &matNormal[0][0]);
   }
 }
 
