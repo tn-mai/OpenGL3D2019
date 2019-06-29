@@ -19,7 +19,7 @@ public:
   ~HeightMap() = default;
 
   bool Load(const char* path, float scale, float middleLevel);
-  bool CreateMesh(Mesh::Buffer& meshBuffer, const char* name) const;
+  bool CreateMesh(Mesh::Buffer& meshBuffer, const char* name, const char* texName = nullptr) const;
   float Height(const glm::vec3& pos) const;
   const glm::ivec2& Size() const { return size; }
   const std::string& Name() const { return name; }

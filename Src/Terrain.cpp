@@ -45,7 +45,8 @@ bool HeightMap::Load(const char* path, float scale, float baseLevel)
 * 高さマップからメッシュを作成する.
 *
 * @param meshBuffer メッシュ作成先となるメッシュバッファ.
-* @param name       作成するメッシュの名前.
+* @param meshName   作成するメッシュの名前.
+* @param texName    メッシュに貼り付けるテクスチャファイル名.
 *
 * @retval true  メッシュの作成に成功.
 * @retval false メッシュを作成できなかった.
@@ -55,7 +56,7 @@ bool HeightMap::Load(const char* path, float scale, float baseLevel)
 *   |／|
 *   +--+
 */
-bool HeightMap::CreateMesh(Mesh::Buffer& meshBuffer, const char* name) const
+bool HeightMap::CreateMesh(Mesh::Buffer& meshBuffer, const char* meshName, const char* texName) const
 {
   if (heights.empty()) {
     return false;
@@ -97,9 +98,15 @@ bool HeightMap::CreateMesh(Mesh::Buffer& meshBuffer, const char* name) const
   const size_t iOffset = meshBuffer.AddIndexData(indices.data(), indices.size() * sizeof(GLuint));
 
   // 頂点データとインデックスデータからメッシュを作成.
+  Texture::Image2DPtr texture;
+  if (texName) {
+    texture = Texture::Image2D::Create(texName);
+  } else {
+    texture = Texture::Image2D::Create(name.c_str());
+  }
   const Mesh::Primitive p = meshBuffer.CreatePrimitive(indices.size(), GL_UNSIGNED_INT, iOffset, vOffset);
-  const Mesh::Material m = meshBuffer.CreateMaterial(glm::vec4(1), nullptr);
-  meshBuffer.AddMesh("Terrain", p, m);
+  const Mesh::Material m = meshBuffer.CreateMaterial(glm::vec4(1), texture);
+  meshBuffer.AddMesh(meshName, p, m);
 
   return true;
 }
