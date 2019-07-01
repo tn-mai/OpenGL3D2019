@@ -24,6 +24,6 @@ void main()
     discard;
   }
   vec3 vLight = normalize(vec3(1, -1.5, -1));
-  float power = dot(normalize(inNormal), -vLight);
+  float power = max(dot(normalize(inNormal), -vLight), 0.0) + 0.2;
   fragColor.rgb *= power;
 }
