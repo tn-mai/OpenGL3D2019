@@ -119,6 +119,12 @@
             "uri" : "temple.bin"
         }
     ],
+    "images" : [
+        {
+            "name" : "temple",
+            "uri" : "temple.png"
+        }
+    ],
     "materials" : [
         {
             "name" : "Material",
@@ -129,6 +135,9 @@
                     0.6400000190734865,
                     1.0
                 ],
+                "baseColorTexture" : {
+                    "index" : 0
+                },
                 "metallicFactor" : 0.0
             }
         }
@@ -189,6 +198,9 @@
             "name" : "Temple"
         }
     ],
+    "samplers" : [
+        {}
+    ],
     "scene" : 0,
     "scenes" : [
         {
@@ -198,6 +210,12 @@
                 1,
                 0
             ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
         }
     ]
 }
