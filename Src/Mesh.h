@@ -246,7 +246,7 @@ private:
   Shader::ProgramPtr progSkeletalMesh;
 
   bool SetAttribute(
-    Primitive& prim, const json11::Json& accessor, const json11::Json& bufferViews, std::vector<std::vector<char>>& binFiles, int index, int size);
+    Primitive& prim, int index, const json11::Json& accessor, const json11::Json& bufferViews, const std::vector<std::vector<char>>& binFiles);
 };
 
 } // namespace Mesh
