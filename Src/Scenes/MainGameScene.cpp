@@ -48,21 +48,18 @@ bool MainGameScene::Initialize()
   fontRenderer.LoadFromFile("Res/font.fnt");
 
   meshBuffer.Init(sizeof(Mesh::Vertex) * 1'000'000, sizeof(GLushort) * 3'000'000, 1024);
-  meshBuffer.CreateCircle("Circle", 8);
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain", "Res/ColorMap.tga");
-  texOniSmall = Texture::Image2D::Create("Res/oni_s_albedo.tga");
-  texPlayer = Texture::Image2D::Create("Res/bikuni_albedo.tga");
 
   meshBuffer.LoadMesh("Res/oni_small.gltf");
   meshBuffer.LoadMesh("Res/bikuni_ver2.gltf");
   meshBuffer.LoadMesh("Res/weed_collection.gltf");
   meshBuffer.LoadMesh("Res/red_pine_tree.gltf");
   meshBuffer.LoadMesh("Res/farmers_house.gltf");
-  meshPlayer = meshBuffer.GetMesh("Bikuni");
-  meshPlayer->SetAnimation("Idle");
-  meshTerrain = meshBuffer.GetMesh("Terrain");
-  meshCircle = meshBuffer.GetMesh("Circle");
+  meshBuffer.LoadMesh("Res/jizo_statue.gltf");
+  meshBuffer.LoadMesh("Res/temple.gltf");
+
+  terrain = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("Terrain"), "Terrain", 100, glm::vec3(0));
 
   // SkeletalMeshクラスのテストコード.
   skeletalMeshTest = meshBuffer.GetSkeletalMesh("Bikuni");
@@ -70,9 +67,8 @@ bool MainGameScene::Initialize()
 
   glm::vec3 startPos(100, 0, 150);
   startPos.y = heightMap.Height(startPos);
-  meshPlayer->translation = startPos;
-
-  meshCircle->translation = startPos + glm::vec3(0, 2, 0);
+  player = std::make_shared<SkeletalMeshActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
+  player->GetMesh()->Play("Idle");
 
 #ifndef NDEBUG
   static const size_t treeCount = 100;
@@ -85,59 +81,76 @@ bool MainGameScene::Initialize()
   static const int oniRange = 20;
   static const size_t weedCount = 1000;
 #endif
-  meshTrees.reserve(treeCount);
   std::mt19937 rand;
   rand.seed(0);
-  for (size_t i = 0; i < treeCount; ++i) {
-    Mesh::MeshPtr p = meshBuffer.GetMesh("RedPineTree");
-    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
-    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
-    p->translation.y = heightMap.Height(p->translation);
-    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand), glm::vec3(0, 1, 0));
-    p->scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
-    p->scale = glm::clamp(p->scale, 0.4f, 1.2f);
-    p->SetAnimation(0);
-    p->frame = std::uniform_real_distribution<float>(0, 2)(rand);
-    meshTrees.push_back(p);
+  {
+    trees.Reserve(treeCount);
+    const Mesh::MeshPtr mesh = meshBuffer.GetMesh("RedPineTree");
+    for (size_t i = 0; i < treeCount; ++i) {
+      glm::vec3 position(0);
+      position.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
+      position.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
+      position.y = heightMap.Height(position);
+      glm::vec3 rotation(0);
+      rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
+      glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
+      scale = glm::clamp(scale, 0.6f, 1.4f);
+      trees.Add(std::make_shared<StaticMeshActor>(mesh, "Tree", 100, position, rotation, scale));
+    }
   }
 
-  meshEnemies.reserve(oniCount);
-  for (size_t i = 0; i < oniCount; ++i) {
-    Mesh::MeshPtr p = meshBuffer.GetMesh("oni_small");
-    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.x;
-    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.z;
-    p->translation.y = heightMap.Height(p->translation);
-    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand), glm::vec3(0, 1, 0));
-    p->scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand) + 0.5f);
-    p->scale = glm::clamp(p->scale, 0.75f, 1.25f);
-    p->SetAnimation(i % 5);
-    p->frame = std::uniform_real_distribution<float>(0, 1)(rand);
-    meshEnemies.push_back(p);
+  {
+    vegetations.Reserve(weedCount);
+    Mesh::MeshPtr mesh[3] = {
+      meshBuffer.GetMesh("Weed.Susuki"),
+      meshBuffer.GetMesh("Weed.Kazekusa"),
+      meshBuffer.GetMesh("Weed.Chigaya")
+    };
+    for (size_t i = 0; i < weedCount; ++i) {
+      glm::vec3 position(0);
+      position.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
+      position.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
+      position.y = heightMap.Height(position);
+      glm::vec3 rotation(0);
+      rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
+      glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.8f, 0.2f)(rand));
+      scale = glm::clamp(scale, 0.8f, 1.2f);
+      vegetations.Add(std::make_shared<StaticMeshActor>(mesh[i % 3], mesh[i % 3]->name, 100, position, rotation, scale));
+    }
   }
 
-  meshFarmersHouse = meshBuffer.GetMesh("FarmersHouse");
-  meshFarmersHouse->translation = startPos + glm::vec3(20, 5, 3);
-  meshFarmersHouse->translation.y = heightMap.Height(meshFarmersHouse->translation);
+  {
+    buildings.Reserve(10);
+    glm::vec3 position = startPos + glm::vec3(20, 5, 3);
+    position.y = heightMap.Height(position);
+    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("FarmersHouse"), "FarmersHouse", 100, position));
 
-  meshWeeds.reserve(weedCount);
-  for (size_t i = 0; i < weedCount; ++i) {
-    static const char* const nameList[] = { "Weed.Susuki", "Weed.Kazekusa", "Weed.Chigaya" };
-    Mesh::MeshPtr p = meshBuffer.GetMesh(nameList[i % 3]);
-    p->translation.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
-    p->translation.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
-    p->translation.y = heightMap.Height(p->translation);
-    p->rotation = glm::angleAxis(std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand), glm::vec3(0, 1, 0));
-//    p->scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
-//    p->scale = glm::clamp(p->scale, 0.4f, 1.2f);
-//    p->SetAnimation(0);
-//    p->frame = std::uniform_real_distribution<float>(0, 2)(rand);
-    meshWeeds.push_back(p);
+    position = startPos + glm::vec3(12, 0, 20);
+    position.y = heightMap.Height(position);
+    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("Temple"), "Temple", 100, position));
+
+    position = startPos + glm::vec3(-5, 0, 6);
+    position.y = heightMap.Height(position);
+    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("JizoStatue"), "JizoStatue", 100, position, glm::vec3(0, 1.5f, 0)));
   }
 
-  Shader::Cache& shaderCache = Shader::Cache::Instance();
-  progMesh = shaderCache.Create("Res/Mesh.vert", "Res/Mesh.frag");
-  progSkeletalMesh = shaderCache.Create("Res/SkeletalMesh.vert", "Res/SkeletalMesh.frag");
-  progSkeletalMesh->BindUniformBlock("MeshMatrixUniformData", 0);
+  {
+    enemies.Reserve(oniCount);
+    for (size_t i = 0; i < oniCount; ++i) {
+      glm::vec3 position(0);
+      position.x = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.x;
+      position.z = static_cast<float>(std::uniform_int_distribution<>(-oniRange, oniRange)(rand)) + startPos.z;
+      position.y = heightMap.Height(position);
+      glm::vec3 rotation(0);
+      rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
+      glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand) + 0.5f);
+      scale = glm::clamp(scale, 0.75f, 1.25f);
+      const Mesh::SkeletalMeshPtr mesh = meshBuffer.GetSkeletalMesh("oni_small");
+      const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
+      mesh->Play(animList[i % animList.size()].name);
+      enemies.Add(std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale));
+    }
+  }
 
   return true;
 }
@@ -152,56 +165,31 @@ void MainGameScene::ProcessInput()
 
     if (actionWaitTimer <= 0) {
       if (window.GetGamePad().buttonDown & GamePad::A) {
-        meshPlayer->SetAnimation("Attack.Light");
-        meshPlayer->isLoop = false;
-        actionWaitTimer = meshPlayer->animation->totalTime;
+        player->GetMesh()->Play("Attack.Light", false);
+        actionWaitTimer = player->GetMesh()->GetTotalAnimationTime();
       } else if (window.GetGamePad().buttonDown & GamePad::B) {
-        meshPlayer->SetAnimation("Attack.Heavy");
-        meshPlayer->isLoop = false;
-        actionWaitTimer = meshPlayer->animation->totalTime;
+        player->GetMesh()->Play("Attack.Heavy", false);
+        actionWaitTimer = player->GetMesh()->GetTotalAnimationTime();
       } else {
-        const glm::aligned_vec3 dir(0, 0, -1);
-        const glm::aligned_vec3 left = glm::normalize(glm::cross(glm::aligned_vec3(0, 1, 0), dir));
-        const float dt = static_cast<float>(window.DeltaTime());
-        glm::aligned_vec3 move(0);
+        const glm::vec3 dir(0, 0, -1);
+        const glm::vec3 left = glm::normalize(glm::cross(glm::vec3(0, 1, 0), dir));
+        glm::vec3 move(0);
         const float speed = 5.0f;
         if (window.KeyPressed(GLFW_KEY_W)) {
-          move += dir * dt * speed;
+          move += dir * speed;
         } else if (window.KeyPressed(GLFW_KEY_S)) {
-          move -= dir * dt * speed;
+          move -= dir * speed;
         }
         if (window.KeyPressed(GLFW_KEY_A)) {
-          move += left * dt * speed;
+          move += left * speed;
         } else if (window.KeyPressed(GLFW_KEY_D)) {
-          move -= left * dt * speed;
+          move -= left * speed;
         }
         if (glm::dot(move, move)) {
-          meshPlayer->translation += move;
-          meshPlayer->translation.y = heightMap.Height(meshPlayer->translation);
+          player->velocity = move;
           move = glm::normalize(move);
-          meshPlayer->rotation = glm::aligned_quat(glm::vec3(0, std::atan2(-move.z, move.x) + glm::radians(90.0f), 0));
-          if (meshPlayer->GetAnimationName() != "Run") {
-            meshPlayer->SetAnimation("Run");
-          }
-        } else {
-          if (meshPlayer->GetAnimationName() != "Idle") {
-            meshPlayer->SetAnimation("Idle");
-          }
+          player->rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
         }
-
-        const glm::vec2 currentMousePos = GLFWEW::Window::Instance().MousePosition();
-        const glm::vec2 mouseMove = currentMousePos - prevMousePos;
-        prevMousePos = currentMousePos;
-        glm::mat4 matRX(1);
-        if (mouseMove.x) {
-          matRX = glm::rotate(glm::aligned_mat4(1), -mouseMove.x / 100.0f, glm::aligned_vec3(0, 1, 0));
-        }
-        glm::mat4 matRY(1);
-        if (mouseMove.y) {
-          matRY = glm::rotate(glm::aligned_mat4(1), mouseMove.y / 100.0f, left);
-        }
-        //dir = matRX * matRY * glm::vec4(dir, 1);
-        //dir = normalize(dir);}
       }
     }
 
@@ -247,19 +235,35 @@ void MainGameScene::Update(float deltaTime)
     actionWaitTimer -= deltaTime;
   }
 
-  meshPlayer->Update(deltaTime);
-  meshTerrain->Update(deltaTime);
-  meshCircle->Update(deltaTime);
-  for (auto& e : meshTrees) {
-    e->Update(deltaTime * 0.25f);
+  player->Update(deltaTime);
+  player->position.y = heightMap.Height(player->position);
+  if (player->GetMesh()->GetAnimation() == "Idle") {
+    if (glm::length(player->velocity) >= 1.0f * deltaTime) {
+      player->GetMesh()->Play("Run");
+    }
+  } else if (player->GetMesh()->GetAnimation() == "Run") {
+    if (glm::dot(player->velocity, player->velocity) == 0.0f) {
+      player->GetMesh()->Play("Idle");
+    } else {
+      const glm::vec3 oldVelocity = player->velocity;
+      player->velocity -= glm::normalize(player->velocity) * 60.0f * deltaTime;
+      if (glm::dot(player->velocity, oldVelocity) <= 0.0f) {
+        player->velocity = glm::vec3(0);
+      }
+    }
   }
-  for (auto& e : meshEnemies) {
-    e->Update(deltaTime);
-  }
-  meshFarmersHouse->Update(deltaTime);
-  for (auto& e : meshWeeds) {
-    e->Update(deltaTime);
-  }
+  player->UpdateDrawData(deltaTime);
+
+  terrain->Update(deltaTime);
+  terrain->UpdateDrawData(deltaTime);
+  trees.Update(deltaTime);
+  trees.UpdateDrawData(deltaTime);
+  vegetations.Update(deltaTime);
+  vegetations.UpdateDrawData(deltaTime);
+  buildings.Update(deltaTime);
+  buildings.UpdateDrawData(deltaTime);
+  enemies.Update(deltaTime);
+  enemies.UpdateDrawData(deltaTime);
 
   // SkeletalMeshクラスのテストコード.
   {
@@ -279,12 +283,12 @@ void MainGameScene::Render()
 
   glm::mat4 matView;
   if (window.KeyPressed(GLFW_KEY_SPACE)) {
-    const glm::aligned_vec3 front = glm::aligned_mat3(meshPlayer->rotation) * glm::aligned_vec3(0, 0, 1);
-    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 1.3f, 0);
+    const glm::aligned_vec3 front = glm::rotate(glm::mat4(1), player->rotation.y, glm::vec3(0, 1, 0)) * glm::aligned_vec4(0, 0, 1, 1);
+    const glm::aligned_vec3 cameraPos = player->position + glm::vec3(0, 1.3f, 0);
     matView = glm::lookAt(cameraPos, cameraPos + front * 5.0f, glm::aligned_vec3(0, 1, 0));
   } else {
-    const glm::aligned_vec3 cameraPos = meshPlayer->translation + glm::aligned_vec3(0, 50, 50);// *0.25f;
-    matView = glm::lookAt(cameraPos, meshPlayer->translation + glm::aligned_vec3(0, 1.25f, 0), glm::aligned_vec3(0, 1, 0));
+    const glm::vec3 cameraPos = player->position + glm::vec3(0, 50, 50);// *0.25f;
+    matView = glm::lookAt(cameraPos, player->position + glm::vec3(0, 1.25f, 0), glm::vec3(0, 1, 0));
   }
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
@@ -295,39 +299,20 @@ void MainGameScene::Render()
   {
     glEnable(GL_CULL_FACE);
 
-    meshTerrain->Draw();
-    meshCircle->Draw();
-
-    meshFarmersHouse->Draw();
+    terrain->Draw();
+    buildings.Draw();
 
     glDisable(GL_CULL_FACE);
 
-    for (const auto& e : meshTrees) {
-      e->Draw();
-    }
-    for (const auto& e : meshWeeds) {
-      e->Draw();
-    }
+    trees.Draw();
+    vegetations.Draw();
   }
 
   {
     glEnable(GL_CULL_FACE);
 
-    progSkeletalMesh->Use();
-
-    const GLint locMeshIndex = progSkeletalMesh->GetUniformLocation("meshIndex");
-    if (locMeshIndex > 0) {
-      progSkeletalMesh->SetUniformInt(locMeshIndex, 0);
-    }
-    texPlayer->Bind(0);
-    meshPlayer->Draw();
-
-    texOniSmall->Bind(0);
-    for (const auto& e : meshEnemies) {
-      e->Draw();
-    }
-
-    progSkeletalMesh->Unuse();
+    player->Draw();
+    enemies.Draw();
   }
 
   // SkeletalMeshクラスのテストコード.
@@ -353,6 +338,5 @@ void MainGameScene::Finalize()
 void MainGameScene::Play()
 {
   GLFWEW::Window::Instance().DisableMouseCursor();
-  prevMousePos = GLFWEW::Window::Instance().MousePosition();
   Scene::Play();
 }

@@ -4,7 +4,7 @@
 #ifndef MAINGAMESCENE_H_INCLUDED
 #define MAINGAMESCENE_H_INCLUDED
 #include "../Scene.h"
-#include "../Mesh.h"
+#include "../Actor.h"
 #include "../SkeletalMesh.h"
 #include "../Texture.h"
 #include "../Shader.h"
@@ -28,27 +28,19 @@ public:
 private:
   Font::Renderer fontRenderer;
   Mesh::Buffer meshBuffer;
-  Mesh::MeshPtr meshPlayer;
-  Mesh::MeshPtr meshTerrain;
-  Mesh::MeshPtr meshCircle;
-  std::vector<Mesh::MeshPtr> meshTrees;
-  std::vector<Mesh::MeshPtr> meshEnemies;
-  Mesh::MeshPtr meshFarmersHouse;
-  std::vector<Mesh::MeshPtr> meshWeeds;
+  SkeletalMeshActorPtr player;
+  StaticMeshActorPtr terrain;
+  ActorList trees;
+  ActorList vegetations;
+  ActorList buildings;
+  ActorList enemies;
   Mesh::SkeletalMeshPtr skeletalMeshTest;
 
-  Shader::ProgramPtr progMesh;
-  Shader::ProgramPtr progSkeletalMesh;
-
   Terrain::HeightMap heightMap;
-
-  Texture::Image2DPtr texOniSmall;
-  Texture::Image2DPtr texPlayer;
 
   float actionWaitTimer = 0;
   glm::vec3 pos = glm::vec3(0, 10, 10);
   glm::vec3 dir = glm::vec3(0, 0, -1);
-  glm::vec2 prevMousePos = glm::vec2(0, 0);
 };
 
 #endif // MAINGAMESCENE_H_INCLUDED
