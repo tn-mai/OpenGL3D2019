@@ -208,6 +208,15 @@ void Mesh::Update(float deltaTime)
 */
 void Mesh::Draw() const
 {
+  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
+  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
+  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
+  const glm::aligned_mat4 matModel = matT * matR * matS;
+  Draw(matModel);
+}
+
+void Mesh::Draw(const glm::mat4& matModel) const
+{
   if (!file || !node) {
     return;
   }
@@ -218,11 +227,6 @@ void Mesh::Draw() const
   //GetMeshNodeList(node, meshNodes);
 
   GlobalSkeletalMeshState::BindUniformData(uboOffset, uboSize);
-
-  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
-  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
-  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
-  const glm::aligned_mat4 matModel = matT * matR * matS;
 
   const MeshData& meshData = file->meshes[node->mesh];
   GLuint prevTexId = 0;

@@ -157,6 +157,7 @@ struct Mesh
   Mesh() = default;
   Mesh(Buffer* p, const FilePtr& f, const Node* n) : parent(p), file(f), node(n) {}
   void Draw() const;
+  void Draw(const glm::mat4& matModel) const;
   void Update(float deltaTime);
   void SetAnimation(int);
   void SetAnimation(const char*);
