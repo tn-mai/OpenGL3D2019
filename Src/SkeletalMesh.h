@@ -61,13 +61,16 @@ public:
   void Draw() const;
   const std::vector<Animation>& GetAnimationList() const;
   const std::string& GetAnimation() const;
+  float GetTotalAnimationTime() const;
   State GetState() const;
-  bool Play(const char*, bool doesLoop = true);
+  bool Play(const std::string& name, bool doesLoop = true);
   bool Stop();
   bool Pause();
   bool Resume();
   void SetAnimationSpeed(float speed);
   float GetAnimationSpeed() const;
+  void SetPosition(float);
+  float GetPosition() const;
 
 private:
   std::string name;

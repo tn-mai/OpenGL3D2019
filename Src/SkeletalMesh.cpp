@@ -256,7 +256,8 @@ void SkeletalMesh::Update(float deltaTime, const glm::aligned_mat4& matModel, co
       if (frame >= animation->totalTime) {
         frame -= animation->totalTime;
       } else if (frame < 0) {
-        frame += animation->totalTime;
+        const float n = std::ceil(-frame / animation->totalTime);
+        frame += animation->totalTime * n;
       }
     } else {
       if (frame >= animation->totalTime) {
@@ -374,6 +375,19 @@ const std::vector<Animation>& SkeletalMesh::GetAnimationList() const
 }
 
 /**
+* アニメーション時間を取得する.
+*
+* @return アニメーション時間(秒).
+*/
+float SkeletalMesh::GetTotalAnimationTime() const
+{
+  if (!file || !animation) {
+    return 0;
+  }
+  return animation->totalTime;
+}
+
+/**
 * アニメーションを再生する.
 *
 * @param animationName 再生するアニメーションの名前.
@@ -382,7 +396,7 @@ const std::vector<Animation>& SkeletalMesh::GetAnimationList() const
 * @retval true  再生開始.
 * @retval false 再生失敗.
 */
-bool SkeletalMesh::Play(const char* animationName, bool doesLoop)
+bool SkeletalMesh::Play(const std::string& animationName, bool doesLoop)
 {
   if (file) {
     for (const auto& e : file->animations) {
@@ -498,6 +512,37 @@ void SkeletalMesh::SetAnimationSpeed(float speed)
 float SkeletalMesh::GetAnimationSpeed() const
 {
   return animationSpeed;
+}
+
+/**
+* アニメーションの再生位置を設定する.
+*
+* @param 
+*/
+void SkeletalMesh::SetPosition(float pos)
+{
+  frame = pos;
+  if (animation) {
+    if (doesLoop) {
+      if (frame >= animation->totalTime) {
+        frame -= animation->totalTime;
+      } else if (frame < 0) {
+        const float n = std::ceil(-frame / animation->totalTime);
+        frame += animation->totalTime * n;
+      }
+    } else {
+      if (frame >= animation->totalTime) {
+        frame = animation->totalTime;
+      } else if (frame < 0) {
+        frame = 0;
+      }
+    }
+  }
+}
+
+float SkeletalMesh::GetPosition() const
+{
+  return frame;
 }
 
 /**
