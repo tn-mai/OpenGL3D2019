@@ -155,41 +155,12 @@ struct MeshTransformation {
 struct Mesh
 {
   Mesh() = default;
-  Mesh(Buffer* p, const FilePtr& f, const Node* n) : parent(p), file(f), node(n) {}
-  void Draw() const;
+  Mesh(const FilePtr& f, const Node* n) : file(f), node(n) {}
   void Draw(const glm::mat4& matModel) const;
-  void Update(float deltaTime);
-  void SetAnimation(int);
-  void SetAnimation(const char*);
-  int GetAnimation() const;
-  const std::string& GetAnimationName() const;
-  bool IsFinishAnimation() const;
-  size_t GetAnimationCount() const;
 
   std::string name;
-
-//  GLenum mode = GL_TRIANGLES;
-//  GLsizei count = 0;
-//  GLenum type = GL_UNSIGNED_SHORT;
-//  const GLvoid* indices = 0;
-//  GLint baseVertex = 0;
-  
-  Buffer* parent = nullptr;
-
   FilePtr file;
   const Node* node = nullptr;
-  const Animation* animation = nullptr;
-
-  glm::aligned_vec3 translation = glm::vec3(0);
-  glm::aligned_quat rotation = glm::quat(glm::vec3(0));
-  glm::aligned_vec3 scale = glm::vec3(1);
-  glm::aligned_vec4 color = glm::vec4(1);
-
-  float frame = 0;
-  bool isLoop = true;
-
-  GLintptr uboOffset = 0;
-  GLsizeiptr uboSize = 0;
 };
 
 /**

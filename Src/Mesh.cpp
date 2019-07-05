@@ -76,145 +76,10 @@ Primitive Buffer::CreatePrimitive(size_t count, GLenum type, size_t iOffset, siz
 }
 
 /**
-*
-*/
-void Mesh::SetAnimation(int animationId)
-{
-  if (file) {
-    if (animationId >= 0 && animationId < static_cast<int>(file->animations.size())) {
-      animation = &file->animations[animationId];
-      frame = 0;
-      isLoop = true;
-    }
-  }
-}
-
-/**
-*
-*/
-void Mesh::SetAnimation(const char* name)
-{
-  if (file) {
-    for (const auto& e : file->animations) {
-      if (e.name == name) {
-        animation = &e;
-        frame = 0;
-        isLoop = true;
-        break;
-      }
-    }
-  }
-}
-
-/**
-*
-*/
-int Mesh::GetAnimation() const
-{
-  if (!file || !animation) {
-    return 0;
-  }
-  return animation - &file->animations[0];
-}
-
-/**
-*
-*/
-const std::string& Mesh::GetAnimationName() const
-{
-  if (!animation) {
-    static const std::string dummy("");
-    return dummy;
-  }
-  return animation->name;
-}
-
-/**
-*
-*/
-bool Mesh::IsFinishAnimation() const
-{
-  if (!file || !animation) {
-    return true;
-  }
-  return animation->totalTime >= frame;
-}
-
-/**
-*
-*/
-size_t Mesh::GetAnimationCount() const
-{
-  return file ? file->animations.size() : 0;
-}
-
-/**
-* メッシュの状態を更新する.
-*
-* @param deltaTime 前回の更新からの経過時間(秒).
-*/
-void Mesh::Update(float deltaTime)
-{
-  if (!parent) {
-    return;
-  }
-
-  if (animation) {
-    frame += deltaTime;
-    if (isLoop) {
-      if (frame >= animation->totalTime) {
-        frame -= animation->totalTime;
-      } else if (frame < 0) {
-        frame += animation->totalTime;
-      }
-    } else {
-      if (frame >= animation->totalTime) {
-        frame = animation->totalTime;
-      } else if (frame < 0) {
-        frame = 0;
-      }
-    }
-  }
-
-  if (node && node->skin >= 0) {
-    UniformDataMeshMatrix uboData;
-    uboData.color = color;
-    const MeshTransformation mt = CalculateTransform(file, node, animation, frame);
-    for (size_t i = 0; i < mt.transformations.size(); ++i) {
-      uboData.matBones[i] = glm::transpose(mt.transformations[i]);
-    }
-    const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
-    const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
-    const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
-    const glm::aligned_mat4 matTRS = matT * matR * matS;
-    for (size_t i = 0; i < mt.matRoot.size(); ++i) {
-      uboData.matModel[i] = glm::transpose(matTRS * mt.matRoot[i]);
-      uboData.matNormal[i] = matR * DecomposeRotation(mt.matRoot[i]);
-    }
-    if (mt.matRoot.empty()) {
-      uboData.matModel[0] = glm::transpose(matTRS);
-      uboData.matNormal[0] = matR;
-    }
-    uboSize = sizeof(glm::aligned_vec4) + sizeof(glm::aligned_mat3x4) * 8 + sizeof(glm::aligned_mat3x4) * mt.transformations.size();
-    uboSize = ((uboSize + 255) / 256) * 256;
-    uboOffset = GlobalSkeletalMeshState::PushUniformData(&uboData, uboSize);
-  }
-}
-
-/**
 * メッシュを描画する.
 *
-* 事前にVAO、シェーダー、テクスチャ等をバインドしておくこと.
+* 事前にVAOをバインドしておくこと.
 */
-void Mesh::Draw() const
-{
-  const glm::aligned_mat4 matT = glm::translate(glm::aligned_mat4(1), translation);
-  const glm::aligned_mat4 matR = glm::mat4_cast(rotation);
-  const glm::aligned_mat4 matS = glm::scale(glm::aligned_mat4(1), scale);
-  const glm::aligned_mat4 matModel = matT * matR * matS;
-  Draw(matModel);
-}
-
 void Mesh::Draw(const glm::mat4& matModel) const
 {
   if (!file || !node) {
@@ -225,8 +90,6 @@ void Mesh::Draw(const glm::mat4& matModel) const
   //std::vector<const Node*> meshNodes;
   //meshNodes.reserve(32);
   //GetMeshNodeList(node, meshNodes);
-
-  GlobalSkeletalMeshState::BindUniformData(uboOffset, uboSize);
 
   const MeshData& meshData = file->meshes[node->mesh];
   GLuint prevTexId = 0;
@@ -239,16 +102,14 @@ void Mesh::Draw(const glm::mat4& matModel) const
 
     if (prim.material >= 0 && prim.material < static_cast<int>(file->materials.size())) {
       const Material& m = file->materials[prim.material];
-      if (node->skin < 0) {
-        m.program->Use();
-        m.program->SetModelMatrix(matModel);
+      m.program->Use();
+      m.program->SetModelMatrix(matModel);
 
-        if (m.texture) {
-          const GLuint texId = m.texture->Id();
-          if (prevTexId != texId) {
-            m.texture->Bind(0);
-            prevTexId = texId;
-          }
+      if (m.texture) {
+        const GLuint texId = m.texture->Id();
+        if (prevTexId != texId) {
+          m.texture->Bind(0);
+          prevTexId = texId;
         }
       }
       //program->SetMaterialColor(m.baseColor);
@@ -423,7 +284,7 @@ MeshPtr Buffer::GetMesh(const char* meshName) const
     static MeshPtr dummy(std::make_shared<Mesh>());
     return dummy;
   }
-  return std::make_shared<Mesh>(const_cast<Buffer*>(this), itr->second.file, itr->second.node);
+  return std::make_shared<Mesh>(itr->second.file, itr->second.node);
 }
 
 /**
