@@ -63,7 +63,7 @@ public:
   const std::string& GetAnimation() const;
   float GetTotalAnimationTime() const;
   State GetState() const;
-  bool Play(const std::string& name, bool doesLoop = true);
+  bool Play(const std::string& name, bool loop = true);
   bool Stop();
   bool Pause();
   bool Resume();
@@ -71,6 +71,9 @@ public:
   float GetAnimationSpeed() const;
   void SetPosition(float);
   float GetPosition() const;
+  bool IsFinished() const;
+  bool Loop() const;
+  void Loop(bool);
 
 private:
   std::string name;
@@ -82,7 +85,7 @@ private:
   State state = State::stop;
   float frame = 0;
   float animationSpeed = 1;
-  bool doesLoop = true;
+  bool loop = true;
 
   GLintptr uboOffset = 0;
   GLsizeiptr uboSize = 0;

@@ -252,7 +252,7 @@ void SkeletalMesh::Update(float deltaTime, const glm::aligned_mat4& matModel, co
   // 再生フレーム更新.
   if (animation && state == State::play) {
     frame += deltaTime * animationSpeed;
-    if (doesLoop) {
+    if (loop) {
       if (frame >= animation->totalTime) {
         frame -= animation->totalTime;
       } else if (frame < 0) {
@@ -295,7 +295,7 @@ void SkeletalMesh::Update(float deltaTime, const glm::aligned_mat4& matModel, co
     case State::stop:
       break;
     case State::play:
-      if (!doesLoop && animation->totalTime >= frame) {
+      if (!loop && animation->totalTime >= frame) {
         state = State::stop;
       }
       break;
@@ -391,12 +391,12 @@ float SkeletalMesh::GetTotalAnimationTime() const
 * アニメーションを再生する.
 *
 * @param animationName 再生するアニメーションの名前.
-* @param doesLoop      ループ再生の指定(true=ループする false=ループしない).
+* @param loop      ループ再生の指定(true=ループする false=ループしない).
 *
 * @retval true  再生開始.
 * @retval false 再生失敗.
 */
-bool SkeletalMesh::Play(const std::string& animationName, bool doesLoop)
+bool SkeletalMesh::Play(const std::string& animationName, bool loop)
 {
   if (file) {
     for (const auto& e : file->animations) {
@@ -404,7 +404,7 @@ bool SkeletalMesh::Play(const std::string& animationName, bool doesLoop)
         animation = &e;
         frame = 0;
         state = State::play;
-        this->doesLoop = doesLoop;
+        this->loop = loop;
         return true;
       }
     }
@@ -517,13 +517,13 @@ float SkeletalMesh::GetAnimationSpeed() const
 /**
 * アニメーションの再生位置を設定する.
 *
-* @param 
+* @param position 再生位置(秒).
 */
-void SkeletalMesh::SetPosition(float pos)
+void SkeletalMesh::SetPosition(float position)
 {
-  frame = pos;
+  frame = position;
   if (animation) {
-    if (doesLoop) {
+    if (loop) {
       if (frame >= animation->totalTime) {
         frame -= animation->totalTime;
       } else if (frame < 0) {
@@ -540,13 +540,62 @@ void SkeletalMesh::SetPosition(float pos)
   }
 }
 
+/**
+* アニメーションの再生位置を取得する.
+*
+* @return 再生位置(秒).
+*/
 float SkeletalMesh::GetPosition() const
 {
   return frame;
 }
 
 /**
+* アニメーションの再生が終了しているか調べる.
 *
+* @retval true  終了している.
+* @retval false 終了していない. または、一度も有効な名前でPlay()が実行されていない.
+*
+* ループ再生中の場合、この関数は常にfalseを返すことに注意.
+*/
+bool SkeletalMesh::IsFinished() const
+{
+  if (!file || !animation) {
+    return false;
+  }
+  return animation->totalTime >= frame;
+}
+
+/**
+* ループ再生の有無を取得する.
+*
+* @retval true ループ再生される.
+* @retval false ループ再生されない.
+*/
+bool SkeletalMesh::Loop() const
+{
+  return loop;
+}
+
+/**
+* ループ再生の有無を取得する.
+*
+* @param loop ループ再生の有無.
+*/
+void SkeletalMesh::Loop(bool loop)
+{
+  this->loop = loop;
+}
+
+/**
+* アニメーションを適用した座標変換行列リストを計算する.
+*
+* @param file      アニメーションとノードを所有するファイルオブジェクト.
+* @param node      スキニング対象のノード.
+* @param animation 計算の元になるアニメーション.
+* @param frame     アニメーションの再生位置.
+*
+* @return アニメーションを適用した座標変換行列リスト.
 */
 MeshTransformation CalculateTransform(const FilePtr& file, const Node* node, const Animation* animation, float frame)
 {
