@@ -260,7 +260,8 @@ void MainGameScene::ProcessInput()
           move -= left * speed;
         }
         if (glm::dot(move, move)) {
-          player->velocity = move;
+          player->velocity.x = move.x;
+          player->velocity.z = move.z;
           move = glm::normalize(move);
           player->rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
         }
