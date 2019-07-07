@@ -9,6 +9,7 @@
 #include <random>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 
 /*
   メッセージモードの開始 begin ラベル
@@ -28,6 +29,81 @@
   - 矩形と球の衝突判定
   - イベント処理(会話、フラグ制御)
 */
+
+/**
+*
+*/
+PlayerActor::PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name, int hp, const glm::vec3& pos,
+  const glm::vec3& rot, const glm::vec3& scale)
+  : SkeletalMeshActor(m, name, hp, pos, rot, scale)
+{
+}
+
+/**
+*
+*/
+void PlayerActor::Update(float deltaTime)
+{
+  SkeletalMeshActor::Update(deltaTime);
+  switch (state) {
+  case State::attack:
+    if (stateTimer > 0.1f && stateTimer < 0.3f) {
+      const glm::vec3 front = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 0, 1)) * glm::vec4(0, 0, -1, 1);
+      colWorldAttack.center = position + front;
+      colWorldAttack.r = 0.5f;
+    }
+    break;
+  default:
+    break;
+  }
+  stateTimer += deltaTime;
+}
+
+/**
+*
+*/
+void SolveCollision(const ActorPtr& a, const ActorPtr& b)
+{
+  if (std::holds_alternative<Collision::Sphere>(a->colWorld)) {
+    Collision::Sphere& c0 = std::get<Collision::Sphere>(a->colWorld);
+    if (std::holds_alternative<Collision::Sphere>(b->colWorld)) {
+      Collision::Sphere& c1 = std::get<Collision::Sphere>(b->colWorld);
+      if (Collision::TestSphereSphere(c0, c1)) {
+        const glm::vec3 v = c0.center - c1.center;
+        const float distance = (c0.r + c1.r) - glm::length(v);
+        const glm::vec3 vn = normalize(v);
+        a->position += vn * distance;
+        c0.center += vn * distance;
+      }
+    } else if (std::holds_alternative<Collision::Capsule>(b->colWorld)) {
+      Collision::Capsule& c1 = std::get<Collision::Capsule>(b->colWorld);
+      glm::vec3 p;
+      if (Collision::TestSphereCapsule(c0, c1, &p)) {
+        const glm::vec3 v = c0.center - p;
+        const float distance = (c0.r + c1.r) - glm::length(v);
+        const glm::vec3 vn = normalize(v);
+        a->position += vn * distance;
+        c0.center += vn * distance;
+      }
+    } else if (std::holds_alternative<Collision::OrientedBoundingBox>(b->colWorld)) {
+      Collision::OrientedBoundingBox& c1 = std::get<Collision::OrientedBoundingBox>(b->colWorld);
+      glm::vec3 p;
+      if (Collision::TestSphereOBB(c0, c1, &p)) {
+        const glm::vec3 v = c0.center - p;
+        if (dot(v, v) > FLT_EPSILON) {
+          const glm::vec3 vn = normalize(v);
+          const float distance = c0.r - glm::length(v) + 0.01f;
+          a->position += vn * distance;
+          c0.center += vn * distance;
+        } else {
+          const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
+          a->position -= deltaVelocity;
+          c0.center -= deltaVelocity;
+        }
+      }
+    }
+  }
+}
 
 /**
 * コンストラクタ.
@@ -58,17 +134,19 @@ bool MainGameScene::Initialize()
   meshBuffer.LoadMesh("Res/farmers_house.gltf");
   meshBuffer.LoadMesh("Res/jizo_statue.gltf");
   meshBuffer.LoadMesh("Res/temple.gltf");
+  meshBuffer.LoadMesh("Res/wood_well.gltf");
 
   terrain = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("Terrain"), "Terrain", 100, glm::vec3(0));
 
-  // SkeletalMeshクラスのテストコード.
-  skeletalMeshTest = meshBuffer.GetSkeletalMesh("Bikuni");
-  skeletalMeshTest->Play("Idle");
-
   glm::vec3 startPos(100, 0, 150);
   startPos.y = heightMap.Height(startPos);
-  player = std::make_shared<SkeletalMeshActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
-  player->GetMesh()->Play("Idle");
+  {
+    player = std::make_shared<SkeletalMeshActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
+    player->GetMesh()->Play("Idle");
+    Collision::Sphere& s = std::get<Collision::Sphere>(player->colLocal);
+    s.center = glm::vec3(0, 0.7f, 0);
+    s.r = 0.5f;
+  }
 
 #ifndef NDEBUG
   static const size_t treeCount = 100;
@@ -95,7 +173,9 @@ bool MainGameScene::Initialize()
       rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
       glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
       scale = glm::clamp(scale, 0.6f, 1.4f);
-      trees.Add(std::make_shared<StaticMeshActor>(mesh, "Tree", 100, position, rotation, scale));
+      StaticMeshActorPtr p = std::make_shared<StaticMeshActor>(mesh, "Tree", 100, position, rotation, scale);
+      p->colLocal = Collision::Capsule{ { glm::vec3(0), glm::vec3(0, 4, 0)}, 0.5f };
+      trees.Add(p);
     }
   }
 
@@ -123,7 +203,9 @@ bool MainGameScene::Initialize()
     buildings.Reserve(10);
     glm::vec3 position = startPos + glm::vec3(20, 5, 3);
     position.y = heightMap.Height(position);
-    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("FarmersHouse"), "FarmersHouse", 100, position));
+    StaticMeshActorPtr p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("FarmersHouse"), "FarmersHouse", 100, position);
+    p->colLocal = Collision::OrientedBoundingBox{ glm::vec3(0, 1, 0), { {1, 0, 0}, {0, 1, 0}, {0,0,-1}}, { 3, 4, 2.5 } };
+    buildings.Add(p);
 
     position = startPos + glm::vec3(12, 0, 20);
     position.y = heightMap.Height(position);
@@ -132,6 +214,10 @@ bool MainGameScene::Initialize()
     position = startPos + glm::vec3(-5, 0, 6);
     position.y = heightMap.Height(position);
     buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("JizoStatue"), "JizoStatue", 100, position, glm::vec3(0, 1.5f, 0)));
+
+    position = startPos + glm::vec3(-20, 0, 25);
+    position.y = heightMap.Height(position);
+    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("WoodWell"), "WoodWell", 100, position, glm::vec3(0, 1.5f, 0)));
   }
 
   {
@@ -148,7 +234,11 @@ bool MainGameScene::Initialize()
       const Mesh::SkeletalMeshPtr mesh = meshBuffer.GetSkeletalMesh("oni_small");
       const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
       mesh->Play(animList[i % animList.size()].name);
-      enemies.Add(std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale));
+      SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale);
+      Collision::Sphere& s = std::get<Collision::Sphere>(p->colLocal);
+      s.center = glm::vec3(0, 0.7f, 0);
+      s.r = 0.5f;
+      enemies.Add(p);
     }
   }
 
@@ -236,6 +326,22 @@ void MainGameScene::Update(float deltaTime)
   }
 
   player->Update(deltaTime);
+  terrain->Update(deltaTime);
+  trees.Update(deltaTime);
+  vegetations.Update(deltaTime);
+  buildings.Update(deltaTime);
+  enemies.Update(deltaTime);
+
+  for (ActorPtr& e : enemies) {
+    SolveCollision(player, e);
+  }
+  for (ActorPtr& e : trees) {
+    SolveCollision(player, e);
+  }
+  for (ActorPtr& e : buildings) {
+    SolveCollision(player, e);
+  }
+
   player->position.y = heightMap.Height(player->position);
   if (player->GetMesh()->GetAnimation() == "Idle") {
     if (glm::length(player->velocity) >= 1.0f * deltaTime) {
@@ -252,26 +358,13 @@ void MainGameScene::Update(float deltaTime)
       }
     }
   }
+
   player->UpdateDrawData(deltaTime);
-
-  terrain->Update(deltaTime);
   terrain->UpdateDrawData(deltaTime);
-  trees.Update(deltaTime);
   trees.UpdateDrawData(deltaTime);
-  vegetations.Update(deltaTime);
   vegetations.UpdateDrawData(deltaTime);
-  buildings.Update(deltaTime);
   buildings.UpdateDrawData(deltaTime);
-  enemies.Update(deltaTime);
   enemies.UpdateDrawData(deltaTime);
-
-  // SkeletalMeshクラスのテストコード.
-  {
-    glm::vec3 pos(120, 0, 160);
-    pos.y = heightMap.Height(pos);
-    const glm::mat4 matModel = translate(glm::mat4(1), pos);
-    skeletalMeshTest->Update(deltaTime, matModel, glm::vec4(1.5f, 0.5f, 0.5f, 1.0f));
-  }
 }
 
 /**
@@ -293,9 +386,7 @@ void MainGameScene::Render()
   const float aspectRatio = static_cast<float>(window.Width()) / static_cast<float>(window.Height());
   const glm::mat4 matProj = glm::perspective(glm::radians(30.0f), aspectRatio, 1.0f, 1000.0f);
 
-  meshBuffer.Bind();
   meshBuffer.SetViewProjectionMatrix(matProj * matView);
-
   {
     glEnable(GL_CULL_FACE);
 
@@ -306,22 +397,19 @@ void MainGameScene::Render()
 
     trees.Draw();
     vegetations.Draw();
-  }
 
-  {
     glEnable(GL_CULL_FACE);
 
     player->Draw();
     enemies.Draw();
   }
 
-  // SkeletalMeshクラスのテストコード.
-  skeletalMeshTest->Draw();
-
-  meshBuffer.Unbind();
-
   const glm::vec2 screenSize(window.Width(), window.Height());
   fontRenderer.Draw(screenSize);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glUseProgram(0);
 }
 
 /**

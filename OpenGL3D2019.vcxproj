@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="Src\Actor.cpp" />
     <ClCompile Include="Src\BufferObject.cpp" />
+    <ClCompile Include="Src\Collision.cpp" />
     <ClCompile Include="Src\Font.cpp" />
     <ClCompile Include="Src\GLFWEW.cpp" />
     <ClCompile Include="Src\json11\json11.cpp" />
@@ -157,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="Src\Actor.h" />
     <ClInclude Include="Src\BufferObject.h" />
+    <ClInclude Include="Src\Collision.h" />
     <ClInclude Include="Src\d3dx12.h" />
     <ClInclude Include="Src\Font.h" />
     <ClInclude Include="Src\GLFWEW.h" />

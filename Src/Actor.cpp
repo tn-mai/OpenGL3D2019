@@ -33,6 +33,27 @@ Actor::Actor(const std::string& name, int health,
 void Actor::Update(float deltaTime)
 {
   position += velocity * deltaTime;
+
+  colWorld = colLocal;
+  if (std::holds_alternative<Collision::Sphere>(colWorld)) {
+    Collision::Sphere& s = std::get<Collision::Sphere>(colWorld);
+    s.center += position;
+  } else if (std::holds_alternative<Collision::Capsule>(colWorld)) {
+    Collision::Capsule& c = std::get<Collision::Capsule>(colWorld);
+    c.line.a += position;
+    c.line.b += position;
+  } else if (std::holds_alternative<Collision::OrientedBoundingBox>(colWorld)) {
+    const glm::mat4 matR_Y = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0));
+    const glm::mat4 matR_ZY = glm::rotate(matR_Y, rotation.z, glm::vec3(0, 0, -1));
+    const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
+    Collision::OrientedBoundingBox& c = std::get<Collision::OrientedBoundingBox>(colWorld);
+    c.center += position;
+    c.e *= scale;
+    for (glm::vec3& e : c.axis) {
+      e = matR_XZY * glm::vec4(e, 1);
+    }
+  } else {
+  }
 }
 
 /**

@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 #include "Mesh.h"
 #include "Terrain.h"
+#include "Collision.h"
 #include <glm/glm.hpp>
 #include <vector>
 #include <memory>
@@ -34,6 +35,8 @@ public:
   glm::vec3 velocity = glm::vec3(0);
   glm::vec4 color = glm::vec4(1);
   int health = 0;
+  Collision::Shape colLocal;
+  Collision::Shape colWorld;
 };
 using ActorPtr = std::shared_ptr<Actor>;
 

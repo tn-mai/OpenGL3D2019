@@ -12,6 +12,35 @@
 #include "../Terrain.h"
 
 /**
+* プレイヤーが操作するアクター.
+*/
+class PlayerActor : public SkeletalMeshActor
+{
+public:
+  PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name, int hp, const glm::vec3& pos,
+    const glm::vec3& rot = glm::vec3(0), const glm::vec3& scale = glm::vec3(1));
+  virtual ~PlayerActor() = default;
+
+  virtual void Update(float) override;
+
+private:
+  enum class State {
+    idle,
+    run,
+    jump,
+    attack,
+    jumpAttack,
+    guard,
+    damage,
+    dead,
+  };
+  State state = State::idle;
+  float stateTimer = 0;
+  bool isGrounded = false;
+  Collision::Sphere  colWorldAttack;
+};
+
+/**
 * メインゲーム画面.
 */
 class MainGameScene : public Scene
@@ -34,7 +63,6 @@ private:
   ActorList vegetations;
   ActorList buildings;
   ActorList enemies;
-  Mesh::SkeletalMeshPtr skeletalMeshTest;
 
   Terrain::HeightMap heightMap;
 

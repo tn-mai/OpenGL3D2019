@@ -1,0 +1,153 @@
+/**
+* @file Collision.cpp
+*/
+#include "Collision.h"
+
+/**
+* 衝突判定を格納する名前空間.
+*
+* 球、カプセル、OBBを扱う.
+*
+* - 球 vs 球
+* - 球 vs カプセル
+* - 球 vs OBB
+*/
+namespace Collision {
+
+/**
+* 球と球が衝突しているか調べる.
+*/
+bool TestSphereSphere(const Sphere& s0, const Sphere& s1)
+{
+  const glm::vec3 m = s0.center - s1.center;
+  const float radiusSum = s0.r + s1.r;
+  return dot(m, m) <= (radiusSum * radiusSum);
+  return true;
+}
+
+/**
+* 線分と点の最近接点を調べる.
+*/
+glm::vec3 ClosestPointLine(const Line& l, const glm::vec3& p)
+{
+  const glm::vec3 v = l.b - l.a;
+  const glm::vec3 m = p - l.a;
+  const float vm = dot(v, m);
+  const float vv = dot(v, v);
+  if (vm < 0) {
+    return l.a;
+  } else if (vm > vv) {
+    return l.b;
+  }
+  return l.a + v * vm / vv;
+}
+
+/**
+* 球とカプセルが衝突しているか調べる.
+*/
+bool TestSphereCapsule(const Sphere& s, const Capsule& c, glm::vec3* p)
+{
+  *p = ClosestPointLine(c.line, s.center);
+  const glm::vec3 distance = *p - s.center;
+  const float radiusSum = s.r + c.r;
+  return dot(distance, distance) <= radiusSum * radiusSum;
+}
+
+/**
+* OBBと点の最近接点を調べる.
+*/
+glm::vec3 ClosestPointOBB(const OrientedBoundingBox& obb, const glm::vec3& p)
+{
+  const glm::vec3 d = p - obb.center;
+  glm::vec3 q = obb.center;
+  for (int i = 0; i < 3; ++i) {
+    float distance = dot(d, obb.axis[i]);
+    if (distance > obb.e[i]) {
+      distance = obb.e[i];
+    } else if (distance < -obb.e[i]) {
+      distance = -obb.e[i];
+    }
+    q += distance * obb.axis[i];
+  }
+  return q;
+}
+
+/**
+* 球とOBBが衝突しているか調べる.
+*/
+bool TestSphereOBB(const Sphere& s, const OrientedBoundingBox& obb, glm::vec3* p)
+{
+  *p = ClosestPointOBB(obb, s.center);
+  const glm::vec3 distance = *p - s.center;
+  return dot(distance, distance) <= s.r * s.r;
+}
+
+/**
+* 移動する球と球が衝突しているか調べる.
+*/
+bool TestMovingSphereSphere(const Sphere& s0, const Sphere& s1, const glm::vec3& v0, const glm::vec3& v1, float* t)
+{
+  const glm::vec3 s = s1.center - s0.center;
+  const float r = s1.r + s0.r;
+  const float c = dot(s, s) - r * r;
+  if (c < 0) {
+    *t = 0;
+    return true;
+  }
+
+  const glm::vec3 v = v1 - v0;
+  const float a = dot(v, v);
+  if (a < FLT_EPSILON) {
+    return false;
+  }
+
+  const float b = dot(v, s);
+  if (b >= 0) {
+    return false;
+  }
+
+  const float d = b * b - a * c;
+  if (d < 0) {
+    return false;
+  }
+  *t = (-b - std::sqrt(d)) / a;
+  return true;
+}
+
+/**
+*
+*/
+bool FindIntersectionRaySphere(const Ray& r, const Sphere& s, float* t, glm::vec3* p)
+{
+  // m.m + m.td + m.td + td.td = r^2
+  // m.m + 2(m.d)t + (d.d)t^2 = r^2
+  // m.m + 2(m.d)t + t^2 = r^2
+  // t^2 + 2(m.d)t + m.m - r^2 = 0
+  // t^2 + 2bt + c = 0 -> b = m.d, c = m.m - r^2
+  // t = -b +- sqrt(b^2 - c)
+  const glm::vec3 m = r.position - s.center;
+  const float b = dot(m, r.direction);
+  const float c = dot(m, m) - s.r * s.r;
+
+  // (c > 0)ならばrの原点はsの外側にある. (b > 0)ならばrはsから離れていく方向を指している.
+  // 上記の両方の条件が満たされる場合、交差は発生しない.
+  if (c > 0 && b > 0) {
+    return false;
+  }
+
+  // 判別式が負の場合は解なし(＝交差しない)
+  const float d = b * b - c;
+  if (d < 0) {
+    return false;
+  }
+
+  // 小さい方の
+  *t = -b - std::sqrt(d);
+  if (*t < 0) {
+    *t = 0;
+  }
+  *p = r.position + r.direction * *t;
+  return true;
+}
+
+} // namespace Collision
