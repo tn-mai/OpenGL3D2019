@@ -78,6 +78,11 @@ void SolveCollision(const ActorPtr& a, const ActorPtr& b)
         const float distance = r - glm::length(v) + 0.01f;
         a->position += vn * distance;
         a->colWorld.s.center += vn * distance;
+        if (a->velocity.y < 0 && v.y > FLT_EPSILON) {
+          a->velocity.y = 0;
+        } else if (a->velocity.y > 0 && v.y < FLT_EPSILON) {
+          a->velocity.y = 0;
+        }
       } else {
         const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
         a->position -= deltaVelocity;
