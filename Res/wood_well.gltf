@@ -5,7 +5,7 @@
             "componentType" : 5123,
             "count" : 1671,
             "max" : [
-                782
+                1058
             ],
             "min" : [
                 0
@@ -15,7 +15,7 @@
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 783,
+            "count" : 1059,
             "max" : [
                 1.0830903053283691,
                 2.286149263381958,
@@ -31,7 +31,7 @@
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 783,
+            "count" : 1059,
             "max" : [
                 1.0,
                 1.0,
@@ -47,7 +47,7 @@
         {
             "bufferView" : 3,
             "componentType" : 5126,
-            "count" : 783,
+            "count" : 1059,
             "max" : [
                 1.0,
                 1.0,
@@ -55,24 +55,24 @@
                 1.0
             ],
             "min" : [
-                -0.9999977946281433,
                 -1.0,
                 -1.0,
-                1.0
+                -1.0,
+                -1.0
             ],
             "type" : "VEC4"
         },
         {
             "bufferView" : 4,
             "componentType" : 5126,
-            "count" : 783,
+            "count" : 1059,
             "max" : [
-                0.9949116110801697,
-                0.9946779678575695
+                0.9994889497756958,
+                0.9989378433674574
             ],
             "min" : [
-                0.003429074538871646,
-                0.0052422285079956055
+                0.0011284137144684792,
+                0.0020830631256103516
             ],
             "type" : "VEC2"
         }
@@ -90,33 +90,39 @@
         },
         {
             "buffer" : 0,
-            "byteLength" : 9396,
+            "byteLength" : 12708,
             "byteOffset" : 3344,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 9396,
-            "byteOffset" : 12740,
+            "byteLength" : 12708,
+            "byteOffset" : 16052,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 12528,
-            "byteOffset" : 22136,
+            "byteLength" : 16944,
+            "byteOffset" : 28760,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 6264,
-            "byteOffset" : 34664,
+            "byteLength" : 8472,
+            "byteOffset" : 45704,
             "target" : 34962
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 40928,
+            "byteLength" : 54176,
             "uri" : "wood_well.bin"
+        }
+    ],
+    "images" : [
+        {
+            "name" : "wood_well",
+            "uri" : "wood_well.png"
         }
     ],
     "materials" : [
@@ -129,6 +135,9 @@
                     0.6400000190734865,
                     1.0
                 ],
+                "baseColorTexture" : {
+                    "index" : 0
+                },
                 "metallicFactor" : 0.0
             }
         }
@@ -189,6 +198,9 @@
             "name" : "WoodWell"
         }
     ],
+    "samplers" : [
+        {}
+    ],
     "scene" : 0,
     "scenes" : [
         {
@@ -198,6 +210,12 @@
                 1,
                 0
             ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
         }
     ]
 }
