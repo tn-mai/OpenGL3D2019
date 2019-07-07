@@ -295,7 +295,7 @@ void SkeletalMesh::Update(float deltaTime, const glm::aligned_mat4& matModel, co
     case State::stop:
       break;
     case State::play:
-      if (!loop && animation->totalTime >= frame) {
+      if (!loop && (frame >= animation->totalTime)) {
         state = State::stop;
       }
       break;
