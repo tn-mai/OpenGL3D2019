@@ -237,10 +237,11 @@ void MainGameScene::ProcessInput()
     GLFWEW::Window& window = GLFWEW::Window::Instance();
 
     if (actionWaitTimer <= 0) {
-      if (window.GetGamePad().buttonDown & GamePad::A) {
+      const GamePad gamepad = window.GetGamePad();
+      if (gamepad.buttonDown & GamePad::A) {
         player->GetMesh()->Play("Attack.Light", false);
         actionWaitTimer = player->GetMesh()->GetTotalAnimationTime();
-      } else if (window.GetGamePad().buttonDown & GamePad::B) {
+      } else if (gamepad.buttonDown & GamePad::X) {
         player->GetMesh()->Play("Attack.Heavy", false);
         actionWaitTimer = player->GetMesh()->GetTotalAnimationTime();
       } else {
@@ -248,14 +249,14 @@ void MainGameScene::ProcessInput()
         const glm::vec3 left = glm::normalize(glm::cross(glm::vec3(0, 1, 0), dir));
         glm::vec3 move(0);
         const float speed = 5.0f;
-        if (window.KeyPressed(GLFW_KEY_W)) {
+        if (gamepad.buttons & GamePad::DPAD_UP) {
           move += dir * speed;
-        } else if (window.KeyPressed(GLFW_KEY_S)) {
+        } else if (gamepad.buttons & GamePad::DPAD_DOWN) {
           move -= dir * speed;
         }
-        if (window.KeyPressed(GLFW_KEY_A)) {
+        if (gamepad.buttons & GamePad::DPAD_LEFT) {
           move += left * speed;
-        } else if (window.KeyPressed(GLFW_KEY_D)) {
+        } else if (gamepad.buttons & GamePad::DPAD_RIGHT) {
           move -= left * speed;
         }
         if (glm::dot(move, move)) {
@@ -268,10 +269,10 @@ void MainGameScene::ProcessInput()
 
     // ÉVÅ[ÉìêÿÇËë÷Ç¶.
     const GamePad gamepad = window.GetGamePad();
-    if (gamepad.buttonDown & GamePad::X) {
+    if (gamepad.buttonDown & GamePad::START) {
       SceneStack::Instance().Push(std::make_shared<StatusScene>());
-    } else if (gamepad.buttonDown & GamePad::START) {
-      SceneStack::Instance().Replace(std::make_shared<GameOverScene>());
+//    } else if (gamepad.buttonDown & GamePad::START) {
+//      SceneStack::Instance().Replace(std::make_shared<GameOverScene>());
     }
   }
 }
