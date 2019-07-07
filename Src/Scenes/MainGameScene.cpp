@@ -330,19 +330,35 @@ void MainGameScene::Update(float deltaTime)
     SolveCollision(player, e);
   }
 
-  player->position.y = heightMap.Height(player->position);
-  if (player->GetMesh()->GetAnimation() == "Idle") {
-    if (glm::length(player->velocity) >= 1.0f * deltaTime) {
-      player->GetMesh()->Play("Run");
-    }
-  } else if (player->GetMesh()->GetAnimation() == "Run") {
-    if (glm::dot(player->velocity, player->velocity) == 0.0f) {
-      player->GetMesh()->Play("Idle");
+  {
+    const glm::vec3 velocityXZ(player->velocity.x, 0, player->velocity.z);
+    if (glm::dot(velocityXZ, velocityXZ) <= FLT_EPSILON) {
+      player->velocity *= glm::vec3(0, 1, 0);
     } else {
-      const glm::vec3 oldVelocity = player->velocity;
-      player->velocity -= glm::normalize(player->velocity) * 60.0f * deltaTime;
-      if (glm::dot(player->velocity, oldVelocity) <= 0.0f) {
-        player->velocity = glm::vec3(0);
+      player->velocity -= glm::normalize(velocityXZ) * 60.0f * deltaTime;
+      if (glm::dot(glm::vec3(player->velocity.x, 0, player->velocity.z), velocityXZ) <= 0.0f) {
+        player->velocity *= glm::vec3(0, 1, 0);
+      }
+    }
+    const float groundY = heightMap.Height(player->position);
+    if (player->position.y < groundY) {
+      player->position.y = groundY;
+      player->velocity.y = 0;
+    } else if (player->position.y > groundY) {
+      player->velocity.y -= 9.8f * deltaTime;
+    }
+
+    if (actionWaitTimer <= 0) {
+      if (player->GetMesh()->GetAnimation() == "Idle") {
+        if (glm::length(velocityXZ) >= 1.0f * deltaTime) {
+          player->GetMesh()->Play("Run");
+        }
+      } else if (player->GetMesh()->GetAnimation() == "Run") {
+        if (glm::length(velocityXZ) < 1.0f * deltaTime) {
+          player->GetMesh()->Play("Idle");
+        }
+      } else {
+        player->GetMesh()->Play("Idle");
       }
     }
   }
