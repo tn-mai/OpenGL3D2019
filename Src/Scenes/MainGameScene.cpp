@@ -64,45 +64,27 @@ void PlayerActor::Update(float deltaTime)
 */
 void SolveCollision(const ActorPtr& a, const ActorPtr& b)
 {
-  if (std::holds_alternative<Collision::Sphere>(a->colWorld)) {
-    Collision::Sphere& c0 = std::get<Collision::Sphere>(a->colWorld);
-    if (std::holds_alternative<Collision::Sphere>(b->colWorld)) {
-      Collision::Sphere& c1 = std::get<Collision::Sphere>(b->colWorld);
-      if (Collision::TestSphereSphere(c0, c1)) {
-        const glm::vec3 v = c0.center - c1.center;
-        const float distance = (c0.r + c1.r) - glm::length(v);
+  DetectCollision(a, b,
+    [](const ActorPtr& a, const ActorPtr& b, const glm::vec3& p) {
+      const glm::vec3 v = a->colWorld.s.center - p;
+      if (dot(v, v) > FLT_EPSILON) {
         const glm::vec3 vn = normalize(v);
-        a->position += vn * distance;
-        c0.center += vn * distance;
-      }
-    } else if (std::holds_alternative<Collision::Capsule>(b->colWorld)) {
-      Collision::Capsule& c1 = std::get<Collision::Capsule>(b->colWorld);
-      glm::vec3 p;
-      if (Collision::TestSphereCapsule(c0, c1, &p)) {
-        const glm::vec3 v = c0.center - p;
-        const float distance = (c0.r + c1.r) - glm::length(v);
-        const glm::vec3 vn = normalize(v);
-        a->position += vn * distance;
-        c0.center += vn * distance;
-      }
-    } else if (std::holds_alternative<Collision::OrientedBoundingBox>(b->colWorld)) {
-      Collision::OrientedBoundingBox& c1 = std::get<Collision::OrientedBoundingBox>(b->colWorld);
-      glm::vec3 p;
-      if (Collision::TestSphereOBB(c0, c1, &p)) {
-        const glm::vec3 v = c0.center - p;
-        if (dot(v, v) > FLT_EPSILON) {
-          const glm::vec3 vn = normalize(v);
-          const float distance = c0.r - glm::length(v) + 0.01f;
-          a->position += vn * distance;
-          c0.center += vn * distance;
-        } else {
-          const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
-          a->position -= deltaVelocity;
-          c0.center -= deltaVelocity;
+        float r = a->colWorld.s.r;
+        switch (b->colWorld.type) {
+        case Collision::Shape::Type::sphere: r += b->colWorld.s.r; break;
+        case Collision::Shape::Type::capsule: r += b->colWorld.c.r; break;
+        case Collision::Shape::Type::obb: break;
         }
+        const float distance = r - glm::length(v) + 0.01f;
+        a->position += vn * distance;
+        a->colWorld.s.center += vn * distance;
+      } else {
+        const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
+        a->position -= deltaVelocity;
+        a->colWorld.s.center -= deltaVelocity;
       }
     }
-  }
+  );
 }
 
 /**
@@ -143,9 +125,7 @@ bool MainGameScene::Initialize()
   {
     player = std::make_shared<SkeletalMeshActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
     player->GetMesh()->Play("Idle");
-    Collision::Sphere& s = std::get<Collision::Sphere>(player->colLocal);
-    s.center = glm::vec3(0, 0.7f, 0);
-    s.r = 0.5f;
+    player->colLocal = Collision::CreateSphere(glm::vec3(0, 0.7f, 0), 0.5f);
   }
 
 #ifndef NDEBUG
@@ -174,7 +154,7 @@ bool MainGameScene::Initialize()
       glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.7f, 0.2f)(rand));
       scale = glm::clamp(scale, 0.6f, 1.4f);
       StaticMeshActorPtr p = std::make_shared<StaticMeshActor>(mesh, "Tree", 100, position, rotation, scale);
-      p->colLocal = Collision::Capsule{ { glm::vec3(0), glm::vec3(0, 4, 0)}, 0.5f };
+      p->colLocal = Collision::CreateCapsule( glm::vec3(0), glm::vec3(0, 4, 0), 0.5f);
       trees.Add(p);
     }
   }
@@ -204,7 +184,7 @@ bool MainGameScene::Initialize()
     glm::vec3 position = startPos + glm::vec3(20, 5, 3);
     position.y = heightMap.Height(position);
     StaticMeshActorPtr p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("FarmersHouse"), "FarmersHouse", 100, position);
-    p->colLocal = Collision::OrientedBoundingBox{ glm::vec3(0, 1, 0), { {1, 0, 0}, {0, 1, 0}, {0,0,-1}}, { 3, 4, 2.5 } };
+    p->colLocal = Collision::CreateOBB({ 0, 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0,0,-1 }, { 3, 4, 2.5 });
     buildings.Add(p);
 
     position = startPos + glm::vec3(12, 0, 20);
@@ -235,9 +215,7 @@ bool MainGameScene::Initialize()
       const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
       mesh->Play(animList[i % animList.size()].name);
       SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale);
-      Collision::Sphere& s = std::get<Collision::Sphere>(p->colLocal);
-      s.center = glm::vec3(0, 0.7f, 0);
-      s.r = 0.5f;
+      p->colLocal = Collision::CreateSphere({ 0, 0.7f, 0 }, 0.5f);
       enemies.Add(p);
     }
   }

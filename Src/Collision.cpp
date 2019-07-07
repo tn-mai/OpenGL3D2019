@@ -83,6 +83,58 @@ bool TestSphereOBB(const Sphere& s, const OrientedBoundingBox& obb, glm::vec3* p
 }
 
 /**
+* 球形状を作成する.
+*
+* @param center 球の中心座標.
+* @param r      球の半径.
+*
+* @return 球を保持する汎用衝突形状オブジェクト.
+*/
+Shape CreateSphere(const glm::vec3& center, float r) {
+  Shape result;
+  result.type = Shape::Type::sphere;
+  result.s = Sphere{ center, r };
+  return result;
+}
+
+/**
+* カプセル形状を作成する.
+*
+* @param a  中心の線分の始点座標.
+* @param b  中心の線分の終点座標.
+* @param r  カプセルの半径.
+*
+* @return カプセルを保持する汎用衝突形状オブジェクト.
+*/
+Shape CreateCapsule(const glm::vec3& a, const glm::vec3& b, float r) {
+  Shape result;
+  result.type = Shape::Type::capsule;
+  result.c = Capsule{ { a, b }, r };
+  return result;
+}
+
+/**
+* 有向境界ボックス形状を作成する.
+*
+* @param center 有向境界ボックスの中心座標.
+* @param axisX  X軸の向き.
+* @param axisY  Y軸の向き.
+* @param axisZ  Z軸の向き.
+* @param e      XYZ軸方向の幅.
+*
+* @return 有向境界ボックスを保持する汎用衝突形状オブジェクト.
+*/
+Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3& axisY, const glm::vec3& axisZ, const glm::vec3& e) {
+  Shape result;
+  result.type = Shape::Type::obb;
+  result.obb = OrientedBoundingBox{ center, { axisX, axisY, axisZ }, e };
+  return result;
+}
+
+
+
+
+/**
 * 移動する球と球が衝突しているか調べる.
 */
 bool TestMovingSphereSphere(const Sphere& s0, const Sphere& s1, const glm::vec3& v0, const glm::vec3& v1, float* t)

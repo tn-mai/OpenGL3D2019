@@ -5,7 +5,6 @@
 #define COLLISION_H_INCLUDED
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <variant>
 
 namespace Collision {
 
@@ -34,7 +33,7 @@ struct Capsule {
 };
 
 /**
-* 有向境界ボックス
+* 有向境界ボックス.
 */
 struct OrientedBoundingBox {
   glm::vec3 center = glm::vec3(0);
@@ -42,17 +41,32 @@ struct OrientedBoundingBox {
   glm::vec3 e = glm::vec3(0);
 };
 
-/**
-* 汎用.
-*/
-using Shape = std::variant<Sphere, Capsule, OrientedBoundingBox>;
-
 bool TestSphereSphere(const Sphere&, const Sphere&);
 bool TestSphereCapsule(const Sphere& s, const Capsule& c, glm::vec3* p);
 bool TestSphereOBB(const Sphere& s, const OrientedBoundingBox& obb, glm::vec3* p);
 
 glm::vec3 ClosestPointLine(const Line& l, const glm::vec3& p);
 glm::vec3 ClosestPointOBB(const OrientedBoundingBox& obb, const glm::vec3& p);
+
+/**
+* 汎用衝突形状.
+*/
+struct Shape
+{
+  enum class Type {
+    sphere,
+    capsule,
+    obb,
+  };
+  Type type = Type::sphere;
+  Sphere s;
+  Capsule c;
+  OrientedBoundingBox obb;
+};
+
+Shape CreateSphere(const glm::vec3& center, float r);
+Shape CreateCapsule(const glm::vec3& a, const glm::vec3& b, float r);
+Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3& axisY, const glm::vec3& axisZ, const glm::vec3& e);
 
 
 

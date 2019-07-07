@@ -35,24 +35,27 @@ void Actor::Update(float deltaTime)
   position += velocity * deltaTime;
 
   colWorld = colLocal;
-  if (std::holds_alternative<Collision::Sphere>(colWorld)) {
-    Collision::Sphere& s = std::get<Collision::Sphere>(colWorld);
-    s.center += position;
-  } else if (std::holds_alternative<Collision::Capsule>(colWorld)) {
-    Collision::Capsule& c = std::get<Collision::Capsule>(colWorld);
-    c.line.a += position;
-    c.line.b += position;
-  } else if (std::holds_alternative<Collision::OrientedBoundingBox>(colWorld)) {
+  switch (colWorld.type) {
+  case Collision::Shape::Type::sphere:
+    colWorld.s.center += position;
+    break;
+
+  case Collision::Shape::Type::capsule:
+    colWorld.c.line.a += position;
+    colWorld.c.line.b += position;
+    break;
+
+  case Collision::Shape::Type::obb: {
     const glm::mat4 matR_Y = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0));
     const glm::mat4 matR_ZY = glm::rotate(matR_Y, rotation.z, glm::vec3(0, 0, -1));
     const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
-    Collision::OrientedBoundingBox& c = std::get<Collision::OrientedBoundingBox>(colWorld);
-    c.center += position;
-    c.e *= scale;
-    for (glm::vec3& e : c.axis) {
+    colWorld.obb.center += position;
+    colWorld.obb.e *= scale;
+    for (glm::vec3& e : colWorld.obb.axis) {
       e = matR_XZY * glm::vec4(e, 1);
     }
-  } else {
+    break;
+  }
   }
 }
 
@@ -246,6 +249,31 @@ ActorPtr ActorList::Find(const std::string& name) const
   return nullptr;
 }
 
+
+/**
+*
+*/
+void DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
+{
+  if (a->colWorld.type == Collision::Shape::Type::sphere) {
+    Collision::Sphere& colA = a->colWorld.s;
+    if (b->colWorld.type == Collision::Shape::Type::sphere) {
+      if (Collision::TestSphereSphere(colA, b->colWorld.s)) {
+        handler(a, b, b->colWorld.s.center);
+      }
+    } else if (b->colWorld.type == Collision::Shape::Type::capsule) {
+      glm::vec3 p;
+      if (Collision::TestSphereCapsule(colA, b->colWorld.c, &p)) {
+        handler(a, b, p);
+      }
+    } else if (b->colWorld.type == Collision::Shape::Type::obb) {
+      glm::vec3 p;
+      if (Collision::TestSphereOBB(colA, b->colWorld.obb, &p)) {
+        handler(a, b, p);
+      }
+    }
+  }
+}
 
 #if 0
 /**
