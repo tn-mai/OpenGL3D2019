@@ -265,6 +265,9 @@ void MainGameScene::ProcessInput()
           move = glm::normalize(move);
           player->rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
         }
+        if (gamepad.buttonDown & GamePad::B) {
+          player->velocity.y += 5.0f;
+        }
       }
     }
 
