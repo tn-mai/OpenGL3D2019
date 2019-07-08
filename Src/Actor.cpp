@@ -3,7 +3,6 @@
 */
 #include "Actor.h"
 #include "SkeletalMesh.h"
-#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 
 /**
@@ -29,6 +28,8 @@ Actor::Actor(const std::string& name, int health,
 * 更新.
 *
 * @param deltaTime 経過時間.
+*
+* UpdateDrawData()より前に実行すること.
 */
 void Actor::Update(float deltaTime)
 {
@@ -57,6 +58,17 @@ void Actor::Update(float deltaTime)
     break;
   }
   }
+}
+
+/**
+* 描画情報の更新.
+*
+* @param deltaTime 経過時間.
+*
+* Update()の後で実行すること.
+*/
+void Actor::UpdateDrawData(float deltaTime)
+{
 }
 
 /**
@@ -121,7 +133,7 @@ SkeletalMeshActor::SkeletalMeshActor(const Mesh::SkeletalMeshPtr& m,
 }
 
 /**
-* 更新.
+* 描画情報の更新.
 *
 * @param deltaTime 経過時間.
 */
@@ -249,9 +261,12 @@ ActorPtr ActorList::Find(const std::string& name) const
   return nullptr;
 }
 
-
 /**
+* 衝突判定を行う.
 *
+* @param a       判定対象のアクターその１.
+* @param b       判定対象のアクターその２.
+* @param handler 衝突した場合に実行される関数.
 */
 void DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
 {

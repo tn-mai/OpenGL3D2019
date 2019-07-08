@@ -5,7 +5,6 @@
 #define ACTOR_H_INCLUDED
 #include <GL/glew.h>
 #include "Mesh.h"
-#include "Terrain.h"
 #include "Collision.h"
 #include <glm/glm.hpp>
 #include <vector>
@@ -25,8 +24,8 @@ public:
   virtual ~Actor() = default;
 
   virtual void Update(float);
-  virtual void UpdateDrawData(float) {}
-  virtual void Draw() = 0;
+  virtual void UpdateDrawData(float);
+  virtual void Draw();
 
 public:
   std::string name;
