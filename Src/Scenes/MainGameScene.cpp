@@ -60,7 +60,10 @@ void PlayerActor::Update(float deltaTime)
 }
 
 /**
+* 衝突を解決する.
 *
+* @param a  衝突したアクターその１.
+* @param b  衝突したアクターその２.
 */
 void SolveCollision(const ActorPtr& a, const ActorPtr& b)
 {
@@ -115,7 +118,7 @@ bool MainGameScene::Initialize()
   heightMap.CreateMesh(meshBuffer, "Terrain", "Res/ColorMap.tga");
 
   meshBuffer.LoadMesh("Res/oni_small.gltf");
-  meshBuffer.LoadMesh("Res/bikuni_ver2.gltf");
+  meshBuffer.LoadMesh("Res/bikuni.gltf");
   meshBuffer.LoadMesh("Res/weed_collection.gltf");
   meshBuffer.LoadMesh("Res/red_pine_tree.gltf");
   meshBuffer.LoadMesh("Res/farmers_house.gltf");
