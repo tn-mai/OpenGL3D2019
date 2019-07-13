@@ -60,7 +60,7 @@ private:
 using StaticMeshActorPtr = std::shared_ptr<StaticMeshActor>;
 
 /**
-* 静的メッシュ用アクター.
+* スケルタルメッシュ用アクター.
 */
 class SkeletalMeshActor : public Actor
 {
@@ -110,6 +110,8 @@ private:
 };
 
 using CollsionHandlerType = std::function<void(const ActorPtr&, const ActorPtr&, const glm::vec3&)>;
-void DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler);
+bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler);
+void DetectCollision(const ActorPtr& a, const ActorList& b, CollsionHandlerType handler);
+void DetectCollision(const ActorList& a, const ActorList& b, CollsionHandlerType handler);
 
 #endif // ACTOR_H_INCLUDED

@@ -267,26 +267,74 @@ ActorPtr ActorList::Find(const std::string& name) const
 * @param a       判定対象のアクターその１.
 * @param b       判定対象のアクターその２.
 * @param handler 衝突した場合に実行される関数.
+*
+* @retval true  衝突した.
+* @retval false 衝突しなかった.
 */
-void DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
+bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
 {
   if (a->colWorld.type == Collision::Shape::Type::sphere) {
     Collision::Sphere& colA = a->colWorld.s;
     if (b->colWorld.type == Collision::Shape::Type::sphere) {
       if (Collision::TestSphereSphere(colA, b->colWorld.s)) {
         handler(a, b, b->colWorld.s.center);
+        return true;
       }
     } else if (b->colWorld.type == Collision::Shape::Type::capsule) {
       glm::vec3 p;
       if (Collision::TestSphereCapsule(colA, b->colWorld.c, &p)) {
         handler(a, b, p);
+        return true;
       }
     } else if (b->colWorld.type == Collision::Shape::Type::obb) {
       glm::vec3 p;
       if (Collision::TestSphereOBB(colA, b->colWorld.obb, &p)) {
         handler(a, b, p);
+        return true;
       }
     }
+  }
+  return false;
+}
+
+/**
+* 衝突判定を行う.
+*
+* @param a       判定対象のアクター.
+* @param b       判定対象のアクターリスト.
+* @param handler 衝突した場合に実行される関数.
+*
+* @retval true  衝突によってaのhealthが0以下になった.
+* @retval false aのhealthが最初から0以下、あるいは
+*/
+void DetectCollision(const ActorPtr& a, const ActorList& b, CollsionHandlerType handler)
+{
+  if (a->health <= 0) {
+    return;
+  }
+  for (const ActorPtr& actorB : b) {
+    if (actorB->health <= 0) {
+      continue;
+    }
+    if (DetectCollision(a, actorB, handler)) {
+      if (a->health <= 0) {
+        break;
+      }
+    }
+  }
+}
+
+/**
+* 衝突判定を行う.
+*
+* @param a       判定対象のアクターリストその１.
+* @param b       判定対象のアクターリストその２.
+* @param handler 衝突した場合に実行される関数.
+*/
+void DetectCollision(const ActorList& a, const ActorList& b, CollsionHandlerType handler)
+{
+  for (const ActorPtr& actorA : a) {
+    DetectCollision(actorA, b, handler);
   }
 }
 
