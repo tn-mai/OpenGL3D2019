@@ -7,38 +7,63 @@
 
 namespace Mesh {
 
+// スキンデータ.
+struct Skin {
+  std::string name;
+  std::vector<int> joints;
+};
 
-/**
-* SkeletalMeshの使い方:
-*
-* main関数への追加:
-* 1. main関数の、OpenGLの初期化が完了したあと、シーンを作成するより前にMesh::GlobalSkeletalMeshState::Initialize()を実行.
-* 2. main関数の終了直前にMesh::GlobalSkeletalMeshState::Finalize()を実行.
-* 3. SceneStack::Update関数呼び出しの直前にMesh::GlobalSkeletalMeshState::ResetUniformData()を実行.
-* 4. SceneStack::Update関数呼び出しの直後にMesh::GlobalSkeletalMeshState::UploadUniformData()を実行.
-*
-* Mesh::Bufferクラスへの追加:
-* 1. Mesh::Material構造体にスケルタルメッシュ用シェーダポインタを追加.
-* 2. Mesh::Bufferクラスにスケルタルメッシュ用のシェーダを読み込む処理を追加.
-* 3. Mesh::Buffer::Init関数の最後でBindUniformBlockを実行.
-* 4. Mesh::Buffer::LoadMesh関数をスケルタルメッシュ対応版に差し替える.
-* 5. Mesh::BufferクラスにGetSkeletalMesh関数を追加.
-*
-* ゲーム中:
-* 
-*/
-namespace GlobalSkeletalMeshState {
+// ノード.
+struct Node {
+  Node* parent = nullptr;
+  int mesh = -1;
+  int skin = -1;
+  std::vector<Node*> children;
+  glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
+  glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
+  glm::aligned_mat4 matInverseBindPose = glm::aligned_mat4(1);
+};
 
-bool Initialize();
-void Finalize();
-bool BindUniformBlock(const Shader::ProgramPtr&);
-void ResetUniformData();
-void UploadUniformData();
+// アニメーションのキーフレーム.
+template<typename T>
+struct KeyFrame {
+  float frame;
+  T value;
+};
 
-GLintptr PushUniformData(const void* data, size_t size);
-void BindUniformData(GLintptr offset, GLsizeiptr size);
+// アニメーションのタイムライン.
+template<typename T>
+struct Timeline {
+  int targetNodeId;
+  std::vector<KeyFrame<T>> timeline;
+};
 
-} // namespace GlobalSkeletalMeshState
+// アニメーション.
+struct Animation {
+  std::vector<Timeline<glm::aligned_vec3>> translationList;
+  std::vector<Timeline<glm::aligned_quat>> rotationList;
+  std::vector<Timeline<glm::aligned_vec3>> scaleList;
+  float totalTime = 0;
+  std::string name;
+};
+
+// シーン.
+struct Scene {
+  int rootNode;
+  std::vector<const Node*> meshNodes;
+};
+
+// 拡張ファイル.
+struct ExtendedFile {
+  std::string name; // ファイル名.
+  std::vector<MeshData> meshes;
+  std::vector<Material> materials;
+
+  std::vector<Scene> scenes;
+  std::vector<Node> nodes;
+  std::vector<Skin> skins;
+  std::vector<Animation> animations;
+};
 
 /**
 * 骨格アニメーションをするメッシュ.
@@ -55,7 +80,7 @@ public:
   };
 
   SkeletalMesh() = default;
-  SkeletalMesh(Buffer* p, const FilePtr& f, const Node* n);
+  SkeletalMesh(const ExtendedFilePtr& f, const Node* n);
 
   void Update(float deltaTime, const glm::aligned_mat4& matModel, const glm::vec4& color);
   void Draw() const;
@@ -77,8 +102,7 @@ public:
 
 private:
   std::string name;
-  Buffer* parent = nullptr;
-  FilePtr file;
+  ExtendedFilePtr file;
   const Node* node = nullptr;
   const Animation* animation = nullptr;
 
@@ -92,76 +116,36 @@ private:
 };
 using SkeletalMeshPtr = std::shared_ptr<SkeletalMesh>;
 
-/**
-* スケルタル・メッシュ描画用UBOデータ.
-*/
-struct alignas(256) UniformDataMeshMatrix
-{
-  glm::aligned_vec4 color;
-  glm::aligned_mat3x4 matModel[4]; // it must transpose.
-  glm::aligned_mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
-  glm::aligned_mat3x4 matBones[256]; // it must transpose.
-};
-
-/**
-* アニメーション用の中間データ.
-*/
-struct AnimatedNodeTree {
-  struct Transformation {
-    glm::aligned_vec3 translation = glm::aligned_vec3(0);
-    glm::aligned_quat rotation = glm::aligned_quat(0, 0, 0, 1);
-    glm::aligned_vec3 scale = glm::aligned_vec3(1);
-    glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
-    glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
-    bool isCalculated = false;
-    bool hasTransformation = false;
-  };
-  std::vector<Transformation> nodeTransformations;
-};
-
 void GetMeshNodeList(const Node* node, std::vector<const Node*>& list);
-void CalcGlobalTransform(const std::vector<Node>& nodes, const Node& node, AnimatedNodeTree& animated);
-AnimatedNodeTree MakeAnimatedNodeTree(const File& file, const Animation& animation, float keyFrame);
-glm::aligned_mat4 DecomposeRotation(const glm::aligned_mat4& m);
-MeshTransformation CalculateTransform(const FilePtr&, const Node*, const Animation*, float);
 
 /**
+* SkeletalMeshの使い方:
 *
+* main関数への追加:
+* 1. main関数の、OpenGLの初期化が完了したあと、シーンを作成するより前にMesh::GlobalSkeletalMeshState::Initialize()を実行.
+* 2. main関数の終了直前にMesh::GlobalSkeletalMeshState::Finalize()を実行.
+* 3. SceneStack::Update関数呼び出しの直前にMesh::GlobalSkeletalMeshState::ResetUniformData()を実行.
+* 4. SceneStack::Update関数呼び出しの直後にMesh::GlobalSkeletalMeshState::UploadUniformData()を実行.
+*
+* Mesh::Bufferクラスへの追加:
+* 1. Mesh::Material構造体にスケルタルメッシュ用シェーダポインタを追加.
+* 2. Mesh::Bufferクラスにスケルタルメッシュ用のシェーダを読み込む処理を追加.
+* 3. Mesh::Buffer::Init関数の最後でBindUniformBlockを実行.
+* 4. Mesh::Buffer::LoadMesh関数をスケルタルメッシュ対応版に差し替える.
+* 5. Mesh::BufferクラスにLoadSkeletalMesh関数、GetSkeletalMesh関数を追加.
+*
+* ゲーム中:
+* 
 */
-template<typename T>
-T Interporation(const Timeline<T>& data, float frame)
-{
-  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
-    [](const KeyFrame<T>& keyFrame, float frame) { return keyFrame.frame < frame; });
-  if (maxFrame == data.timeline.begin()) {
-    return data.timeline.front().value;
-  }
-  if (maxFrame == data.timeline.end()) {
-    return data.timeline.back().value;
-  }
-  const auto minFrame = maxFrame - 1;
-  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
-  return glm::mix(minFrame->value, maxFrame->value, ratio);
-}
+namespace GlobalSkeletalMeshState {
 
-/**
-*
-*/
-template<typename T, glm::qualifier Q>
-glm::qua<T, Q> Interporation(const Timeline<glm::qua<T, Q> >& data, float frame)
-{
-  const auto maxFrame = std::lower_bound(data.timeline.begin(), data.timeline.end(), frame,
-    [](const KeyFrame<glm::qua<T, Q>>& keyFrame, float frame) { return keyFrame.frame < frame; });
-  if (maxFrame == data.timeline.begin()) {
-    return data.timeline.front().value;
-  }
-  if (maxFrame == data.timeline.end()) {
-    return data.timeline.back().value;
-  }
-  const auto minFrame = maxFrame - 1;
-  const float ratio = glm::clamp((frame - minFrame->frame) / (maxFrame->frame - minFrame->frame), 0.0f, 1.0f);
-  return glm::slerp(minFrame->value, maxFrame->value, ratio);
-}
+bool Initialize();
+void Finalize();
+bool BindUniformBlock(const Shader::ProgramPtr&);
+void ResetUniformData();
+void UploadUniformData();
+
+} // namespace GlobalSkeletalMeshState
 
 } // namespace Mesh
 

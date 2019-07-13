@@ -31,6 +31,11 @@ using MeshPtr = std::shared_ptr<Mesh>;
 class SkeletalMesh;
 using SkeletalMeshPtr = std::shared_ptr<SkeletalMesh>;
 
+// スケルタルメッシュ用.
+struct Node;
+struct ExtendedFile;
+using ExtendedFilePtr = std::shared_ptr<ExtendedFile>;
+
 // 頂点データ.
 struct Vertex
 {
@@ -68,68 +73,13 @@ struct MeshData {
   std::vector<Primitive> primitives;
 };
 
-// スキンデータ.
-struct Skin {
-  std::string name;
-  std::vector<int> joints;
-};
-
-// ノード.
-struct Node {
-  Node* parent = nullptr;
-  int mesh = -1;
-  int skin = -1;
-  std::vector<Node*> children;
-  glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
-  glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
-  glm::aligned_mat4 matInverseBindPose = glm::aligned_mat4(1);
-};
-
-// アニメーションのキーフレーム.
-template<typename T>
-struct KeyFrame {
-  float frame;
-  T value;
-};
-
-// アニメーションのタイムライン.
-template<typename T>
-struct Timeline {
-  int targetNodeId;
-  std::vector<KeyFrame<T>> timeline;
-};
-
-// アニメーション.
-struct Animation {
-  std::vector<Timeline<glm::aligned_vec3>> translationList;
-  std::vector<Timeline<glm::aligned_quat>> rotationList;
-  std::vector<Timeline<glm::aligned_vec3>> scaleList;
-  float totalTime = 0;
-  std::string name;
-};
-
-// シーン.
-struct Scene {
-  int rootNode;
-  std::vector<const Node*> meshNodes;
-};
-
 // ファイル.
 struct File {
   std::string name; // ファイル名.
-  std::vector<Scene> scenes;
-  std::vector<Node> nodes;
   std::vector<MeshData> meshes;
   std::vector<Material> materials;
-  std::vector<Skin> skins;
-  std::vector<Animation> animations;
 };
 using FilePtr = std::shared_ptr<File>;
-
-struct MeshTransformation {
-  std::vector<glm::aligned_mat4> transformations;
-  std::vector<glm::aligned_mat4> matRoot;
-};
 
 /**
 * 描画するメッシュデータ.
@@ -155,12 +105,12 @@ struct MeshTransformation {
 struct Mesh
 {
   Mesh() = default;
-  Mesh(const FilePtr& f, const Node* n) : file(f), node(n) {}
+  Mesh(const FilePtr& f, int n) : file(f), meshNo(n) {}
   void Draw(const glm::mat4& matModel) const;
 
   std::string name;
   FilePtr file;
-  const Node* node = nullptr;
+  int meshNo = -1;
 };
 
 /**
@@ -191,7 +141,6 @@ public:
   bool AddMesh(const char* name, const Primitive& primitive, const Material& material);
   bool LoadMesh(const char* path);
   MeshPtr GetMesh(const char* meshName) const;
-  SkeletalMeshPtr GetSkeletalMesh(const char* meshName) const;
   void Bind();
   void Unbind();
 
@@ -201,24 +150,31 @@ public:
   void CreateCircle(const char* name, size_t segments);
   void CreateSphere(const char* name, size_t segments, size_t rings);
 
+  // スケルタルメッシュ用.
+  bool LoadSkeletalMesh(const char* path);
+  SkeletalMeshPtr GetSkeletalMesh(const char* meshName) const;
+
 private:
   BufferObject vbo;
   BufferObject ibo;
   VertexArrayObject vao;
   GLintptr vboEnd = 0;
   GLintptr iboEnd = 0;
-  struct MeshIndex {
-    FilePtr file;
-    const Node* node = nullptr;
-  };
-  std::unordered_map<std::string, MeshIndex> meshes;
-  std::unordered_map<std::string, FilePtr> files;
 
+  std::unordered_map<std::string, FilePtr> files;
   Shader::ProgramPtr progStaticMesh;
-  Shader::ProgramPtr progSkeletalMesh;
 
   bool SetAttribute(
     Primitive& prim, int index, const json11::Json& accessor, const json11::Json& bufferViews, const std::vector<std::vector<char>>& binFiles);
+
+  // スケルタルメッシュ用.
+  struct MeshIndex {
+    ExtendedFilePtr file;
+    const Node* node = nullptr;
+  };
+  std::unordered_map<std::string, MeshIndex> meshes;
+  std::unordered_map<std::string, ExtendedFilePtr> extendedFiles;
+  Shader::ProgramPtr progSkeletalMesh;
 };
 
 } // namespace Mesh

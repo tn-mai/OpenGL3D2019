@@ -82,7 +82,7 @@ Primitive Buffer::CreatePrimitive(size_t count, GLenum type, size_t iOffset, siz
 */
 void Mesh::Draw(const glm::mat4& matModel) const
 {
-  if (!file || !node) {
+  if (!file || meshNo < 0) {
     return;
   }
 
@@ -91,7 +91,7 @@ void Mesh::Draw(const glm::mat4& matModel) const
   //meshNodes.reserve(32);
   //GetMeshNodeList(node, meshNodes);
 
-  const MeshData& meshData = file->meshes[node->mesh];
+  const MeshData& meshData = file->meshes[meshNo];
   GLuint prevTexId = 0;
   for (const auto& prim : meshData.primitives) {
     prim.vao->Bind();
@@ -226,13 +226,10 @@ void Buffer::AddMesh(const char* name, size_t count, GLenum type, size_t iOffset
   pFile->meshes.push_back(data);
 
   pFile->materials.push_back(CreateMaterial(glm::vec4(1), nullptr));
-  pFile->nodes.resize(1);
-  pFile->nodes[0].mesh = 0;
   if (files.find(name) != files.end()) {
     std::cerr << "[警告]" << __func__ << ": " << pFile->name << "という名前は登録済みです.\n";
   }
   files.insert(std::make_pair(pFile->name, pFile));
-  meshes.insert(std::make_pair(pFile->meshes[0].name, MeshIndex{ pFile, &pFile->nodes[0] }));
   std::cout << "Mesh::Buffer: メッシュ'" << name << "'を追加.\n";
 }
 
@@ -261,11 +258,7 @@ bool Buffer::AddMesh(const char* name, const Primitive& primitive, const Materia
   p->meshes[0].name = name;
   p->meshes[0].primitives.push_back(primitive);
 
-  p->nodes.resize(1);
-  p->nodes[0].mesh = 0;
-
   files.insert(std::make_pair(p->name, p));
-  meshes.insert(std::make_pair(p->meshes[0].name, MeshIndex{ p, &p->nodes[0] }));
   std::cout << "[情報]" << __func__ << ": メッシュ'" << name << "'を追加.\n";
   return true;
 }
@@ -279,33 +272,15 @@ bool Buffer::AddMesh(const char* name, const Primitive& primitive, const Materia
 */
 MeshPtr Buffer::GetMesh(const char* meshName) const
 {
-  const auto itr = meshes.find(meshName);
-  if (itr == meshes.end()) {
-    static MeshPtr dummy(std::make_shared<Mesh>());
-    return dummy;
+  for (const auto& f : files) {
+    for (int i = 0; i < f.second->meshes.size(); ++i) {
+      if (f.second->meshes[i].name == meshName) {
+        return std::make_shared<Mesh>(f.second, i);
+      }
+    }
   }
-  return std::make_shared<Mesh>(itr->second.file, itr->second.node);
-}
-
-/**
-* スケルタルメッシュを取得する.
-*
-* @param meshName 取得したいスケルタルメッシュの名前.
-*
-* @return meshNameと同じ名前を持つスケルタルメッシュ.
-*/
-SkeletalMeshPtr Buffer::GetSkeletalMesh(const char* meshName) const
-{
-  const auto itr = meshes.find(meshName);
-  if (itr == meshes.end()) {
-    static SkeletalMeshPtr dummy(std::make_shared<SkeletalMesh>());
-    return dummy;
-  }
-
-  FilePtr pFile = itr->second.file;
-  const Node* pNode = itr->second.node;
-  SkeletalMeshPtr p(std::make_shared<SkeletalMesh>(const_cast<Buffer*>(this), pFile, pNode));
-  return p;
+  static MeshPtr dummy(std::make_shared<Mesh>());
+  return dummy;
 }
 
 /**
@@ -523,64 +498,6 @@ void Buffer::Unbind()
 }
 
 /**
-* JSONの配列データをglm::vec3に変換する.
-*
-* @param json 変換元となる配列データ.
-*
-* @return jsonを変換してできたvec3の値.
-*/
-glm::vec3 GetVec3(const json11::Json& json)
-{
-  const std::vector<json11::Json>& a = json.array_items();
-  if (a.size() < 3) {
-    return glm::vec3(0);
-  }
-  return glm::vec3(a[0].number_value(), a[1].number_value(), a[2].number_value());
-}
-
-/**
-* JSONの配列データをglm::quatに変換する.
-*
-* @param json 変換元となる配列データ.
-*
-* @return jsonを変換してできたquatの値.
-*/
-glm::quat GetQuat(const json11::Json& json)
-{
-  const std::vector<json11::Json>& a = json.array_items();
-  if (a.size() < 4) {
-    return glm::quat(0, 0, 0, 1);
-  }
-  return glm::quat(
-    static_cast<float>(a[3].number_value()),
-    static_cast<float>(a[0].number_value()),
-    static_cast<float>(a[1].number_value()),
-    static_cast<float>(a[2].number_value())
-  );
-}
-
-/**
-* JSONの配列データをglm::mat4に変換する.
-*
-* @param json 変換元となる配列データ.
-*
-* @return jsonを変換してできたmat4の値.
-*/
-glm::mat4 GetMat4(const json11::Json& json)
-{
-  const std::vector<json11::Json>& a = json.array_items();
-  if (a.size() < 16) {
-    return glm::mat4(1);
-  }
-  return glm::mat4(
-    a[0].number_value(), a[1].number_value(), a[2].number_value(), a[3].number_value(),
-    a[4].number_value(), a[5].number_value(), a[6].number_value(), a[7].number_value(),
-    a[8].number_value(), a[9].number_value(), a[10].number_value(), a[11].number_value(),
-    a[12].number_value(), a[13].number_value(), a[14].number_value(), a[15].number_value()
-  );
-}
-
-/**
 * アクセッサが指定するバイナリデータの位置とバイト数を取得する.
 *
 * @param accessor    glTFアクセッサ
@@ -688,38 +605,7 @@ bool Buffer::SetAttribute(
 }
 
 /**
-* ノードのローカル姿勢行列を計算する.
 *
-* @param node gltfノード.
-*
-* @return nodeのローカル姿勢行列.
-*/
-glm::mat4 CalcLocalMatrix(const json11::Json& node)
-{
-  if (node["matrix"].is_array()) {
-    return GetMat4(node["matrix"]);
-  } else {
-    glm::mat4 m(1);
-    if (node["translation"].is_array()) {
-      m *= glm::translate(glm::mat4(1), GetVec3(node["translation"]));
-    }
-    if (node["rotation"].is_array()) {
-      m *= glm::mat4_cast(GetQuat(node["rotation"]));
-    }
-    if (node["scale"].is_array()) {
-      m *= glm::scale(glm::mat4(1), GetVec3(node["scale"]));
-    }
-    return m;
-  }
-}
-
-/**
-* glTFファイルを読み込む.
-*
-* @param path glTFファイル名.
-*
-* @retval true  読み込み成功.
-* @retval false 読み込み失敗.
 */
 bool Buffer::LoadMesh(const char* path)
 {
@@ -798,16 +684,12 @@ bool Buffer::LoadMesh(const char* path)
       const int accessorId_position = attributes["POSITION"].int_value();
       const int accessorId_normal = attributes["NORMAL"].is_null() ? -1 : attributes["NORMAL"].int_value();
       const int accessorId_texcoord = attributes["TEXCOORD_0"].is_null() ? -1 : attributes["TEXCOORD_0"].int_value();
-      const int accessorId_weights = attributes["WEIGHTS_0"].is_null() ? -1 : attributes["WEIGHTS_0"].int_value();
-      const int accessorId_joints = attributes["JOINTS_0"].is_null() ? -1 : attributes["JOINTS_0"].int_value();
 
       mesh.primitives[primId].vao = std::make_shared<VertexArrayObject>();
       mesh.primitives[primId].vao->Create(vbo.Id(), ibo.Id());
       SetAttribute(mesh.primitives[primId], 0, accessors[accessorId_position], bufferViews, binFiles);
       SetAttribute(mesh.primitives[primId], 2, accessors[accessorId_texcoord], bufferViews, binFiles);
       SetAttribute(mesh.primitives[primId], 3, accessors[accessorId_normal], bufferViews, binFiles);
-      SetAttribute(mesh.primitives[primId], 4, accessors[accessorId_weights], bufferViews, binFiles);
-      SetAttribute(mesh.primitives[primId], 5, accessors[accessorId_joints], bufferViews, binFiles);
 
       mesh.primitives[primId].material = primitive["material"].int_value();
     }
@@ -846,192 +728,11 @@ bool Buffer::LoadMesh(const char* path)
     }
   }
 
-  // ノードツリーを構築.
-  {
-    const json11::Json& nodes = json["nodes"];
-    int i = 0;
-    file.nodes.resize(nodes.array_items().size());
-    for (const auto& node : nodes.array_items()) {
-      // 親子関係を構築.
-      // NOTE: ポインタを使わずともインデックスで十分かもしれない.
-      const std::vector<json11::Json>& children = node["children"].array_items();
-      file.nodes[i].children.reserve(children.size());
-      for (const auto& e : children) {
-        const int childJointId = e.int_value();
-        file.nodes[i].children.push_back(&file.nodes[childJointId]);
-        if (!file.nodes[childJointId].parent) {
-          file.nodes[childJointId].parent = &file.nodes[i];
-        }
-      }
-
-      // ローカル座標変換行列を計算.
-      file.nodes[i].matLocal = CalcLocalMatrix(nodes[i]);
-
-      ++i;
-    }
-
-    // シーンのルートノードを取得.
-    file.scenes.reserve(json["scenes"].array_items().size());
-    for (const auto& scene : json["scenes"].array_items()) {
-      Scene tmp;
-      tmp.rootNode = scene.int_value();
-      GetMeshNodeList(&file.nodes[tmp.rootNode], tmp.meshNodes);
-      file.scenes.push_back(tmp);
-    }
-  }
-
-  {
-    for (size_t i = 0; i < file.nodes.size(); ++i) {
-      file.nodes[i].matGlobal = file.nodes[i].matLocal;
-      Node* parent = file.nodes[i].parent;
-      while (parent) {
-        file.nodes[i].matGlobal = parent->matLocal * file.nodes[i].matGlobal;
-        parent = parent->parent;
-      }
-    }
-  }
-
-  file.skins.reserve(json["skins"].array_items().size());
-  for (const auto& skin : json["skins"].array_items()) {
-    Skin tmpSkin;
-
-    // バインドポーズ行列を取得.
-    const json11::Json& accessor = accessors[skin["inverseBindMatrices"].int_value()];
-    if (accessor["type"].string_value() != "MAT4") {
-      std::cerr << "ERROR: バインドポーズのtypeはMAT4でなくてはなりません \n";
-      std::cerr << "  type = " << accessor["type"].string_value() << "\n";
-      return false;
-    }
-    if (accessor["componentType"].int_value() != GL_FLOAT) {
-      std::cerr << "ERROR: バインドポーズのcomponentTypeはGL_FLOATでなくてはなりません \n";
-      std::cerr << "  type = 0x" << std::hex << accessor["componentType"].string_value() << "\n";
-      return false;
-    }
-
-    const void* p;
-    size_t byteLength;
-    GetBuffer(accessor, bufferViews, binFiles, &p, &byteLength);
-
-    // gltfのバッファデータはリトルエンディアン. 仕様に書いてある.
-    const std::vector<json11::Json>& joints = skin["joints"].array_items();
-    std::vector<glm::mat4> inverseBindPoseList;
-    inverseBindPoseList.resize(accessor["count"].int_value());
-    memcpy(inverseBindPoseList.data(), p, std::min(byteLength, inverseBindPoseList.size() * 64));
-    tmpSkin.joints.resize(joints.size());
-    for (size_t i = 0; i < joints.size(); ++i) {
-      const int jointId = joints[i].int_value();
-      tmpSkin.joints[i] = jointId;
-      file.nodes[jointId].matInverseBindPose = inverseBindPoseList[i];
-    }
-    tmpSkin.name = skin["name"].string_value();
-    file.skins.push_back(tmpSkin);
-  }
-
-  {
-    const std::vector<json11::Json>& nodes = json["nodes"].array_items();
-    for (size_t i = 0; i < nodes.size(); ++i) {
-      const json11::Json& meshId = nodes[i]["mesh"];
-      if (meshId.is_number()) {
-        file.nodes[i].mesh = meshId.int_value();
-      }
-      const json11::Json& skinId = nodes[i]["skin"];
-      if (skinId.is_number()) {
-        file.nodes[i].skin = skinId.int_value();
-      }
-    }
-  }
-
-  // アニメーション.
-  {
-    for (const auto& animation : json["animations"].array_items()) {
-      Animation anime;
-      anime.translationList.reserve(32);
-      anime.rotationList.reserve(32);
-      anime.scaleList.reserve(32);
-      anime.name = animation["name"].string_value();
-
-      const std::vector<json11::Json>& channels = animation["channels"].array_items();
-      const std::vector<json11::Json>& samplers = animation["samplers"].array_items();
-      for (const json11::Json& e : channels) {
-        const int samplerId = e["sampler"].int_value();
-        const json11::Json& sampler = samplers[samplerId];
-        const json11::Json& target = e["target"];
-        const int targetNodeId = target["node"].int_value();
-
-        const int inputAccessorId = sampler["input"].int_value();
-        const int inputCount = accessors[inputAccessorId]["count"].int_value();
-        const void* pInput;
-        size_t inputByteLength;
-        GetBuffer(accessors[inputAccessorId], bufferViews, binFiles, &pInput, &inputByteLength);
-
-        const int outputAccessorId = sampler["output"].int_value();
-        const int outputCount = accessors[outputAccessorId]["count"].int_value();
-        const void* pOutput;
-        size_t outputByteLength;
-        GetBuffer(accessors[outputAccessorId], bufferViews, binFiles, &pOutput, &outputByteLength);
-
-        const std::string& path = target["path"].string_value();
-        anime.totalTime = 0;
-        if (path == "translation") {
-          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
-          const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
-          Timeline<glm::aligned_vec3> timeline;
-          timeline.timeline.reserve(inputCount);
-          for (int i = 0; i < inputCount; ++i) {
-            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
-            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
-          }
-          timeline.targetNodeId = targetNodeId;
-          anime.translationList.push_back(timeline);
-        } else if (path == "rotation") {
-          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
-          const glm::quat* pData = static_cast<const glm::quat*>(pOutput);
-          Timeline<glm::aligned_quat> timeline;
-          timeline.timeline.reserve(inputCount);
-          for (int i = 0; i < inputCount; ++i) {
-            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
-            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
-          }
-          timeline.targetNodeId = targetNodeId;
-          anime.rotationList.push_back(timeline);
-        } else if (path == "scale") {
-          const GLfloat* pKeyFrame = static_cast<const GLfloat*>(pInput);
-          const glm::vec3* pData = static_cast<const glm::vec3*>(pOutput);
-          Timeline<glm::aligned_vec3> timeline;
-          timeline.timeline.reserve(inputCount);
-          for (int i = 0; i < inputCount; ++i) {
-            anime.totalTime = std::max(anime.totalTime, pKeyFrame[i]);
-            timeline.timeline.push_back({ pKeyFrame[i], pData[i] });
-          }
-          timeline.targetNodeId = targetNodeId;
-          anime.scaleList.push_back(timeline);
-        }
-      }
-      file.animations.push_back(anime);
-    }
-  }
-
   file.name = path;
   files.insert(std::make_pair(file.name, pFile));
-  for (size_t i = 0; i < file.nodes.size(); ++i) {
-    const int meshIndex = file.nodes[i].mesh;
-    if ( meshIndex < 0) {
-      continue;
-    }
-    const MeshData& mesh = file.meshes[meshIndex];
-    meshes.insert(std::make_pair(mesh.name, MeshIndex{ pFile, &pFile->nodes[i] }));
-  }
-
   std::cout << "[INFO]" << __func__ << ": '" << path << "'を読み込みました.\n";
-  std::cout << "  total nodes = " << file.nodes.size() << "\n";
   for (size_t i = 0; i < file.meshes.size(); ++i) {
     std::cout << "  mesh[" << i << "] = " << file.meshes[i].name << "\n";
-  }
-  for (size_t i = 0; i < file.animations.size(); ++i) {
-    std::cout << "  animation[" << i << "] = " << file.animations[i].name << "(" << file.animations[i].totalTime << "sec)\n";
-  }
-  for (size_t i = 0; i < file.skins.size(); ++i) {
-    std::cout << "  skin[" << i << "] = " << file.skins[i].name << "(" << file.skins[i].joints.size() << ")\n";
   }
 
   return true;
@@ -1050,7 +751,7 @@ void Buffer::SetViewProjectionMatrix(const glm::mat4& matVP) const
   progStaticMesh->SetViewProjectionMatrix(matVP);
   progSkeletalMesh->Use();
   progSkeletalMesh->SetViewProjectionMatrix(matVP);
-  progSkeletalMesh->Unuse();
+  glUseProgram(0);
 }
 
 } // namespace Mesh
