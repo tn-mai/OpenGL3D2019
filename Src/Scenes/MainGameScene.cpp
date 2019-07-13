@@ -364,39 +364,35 @@ void PlayerActor::Update(float deltaTime)
 }
 
 /**
-* 衝突を解決する.
+* プレイヤーと障害物の衝突を解決する.
 *
 * @param a  衝突したアクターその１.
 * @param b  衝突したアクターその２.
 */
-void SolveCollision(const ActorPtr& a, const ActorPtr& b)
+void PlayerObstacleCollisionHandler(const ActorPtr& a, const ActorPtr& b, const glm::vec3& p)
 {
-  DetectCollision(a, b,
-    [](const ActorPtr& a, const ActorPtr& b, const glm::vec3& p) {
-      const glm::vec3 v = a->colWorld.s.center - p;
-      if (dot(v, v) > FLT_EPSILON) {
-        const glm::vec3 vn = normalize(v);
-        float r = a->colWorld.s.r;
-        switch (b->colWorld.type) {
-        case Collision::Shape::Type::sphere: r += b->colWorld.s.r; break;
-        case Collision::Shape::Type::capsule: r += b->colWorld.c.r; break;
-        case Collision::Shape::Type::obb: break;
-        }
-        const float distance = r - glm::length(v) + 0.01f;
-        a->position += vn * distance;
-        a->colWorld.s.center += vn * distance;
-        if (a->velocity.y < 0 && v.y > FLT_EPSILON) {
-          a->velocity.y = 0;
-        } else if (a->velocity.y > 0 && v.y < FLT_EPSILON) {
-          a->velocity.y = 0;
-        }
-      } else {
-        const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
-        a->position -= deltaVelocity;
-        a->colWorld.s.center -= deltaVelocity;
-      }
+  const glm::vec3 v = a->colWorld.s.center - p;
+  if (dot(v, v) > FLT_EPSILON) {
+    const glm::vec3 vn = normalize(v);
+    float r = a->colWorld.s.r;
+    switch (b->colWorld.type) {
+    case Collision::Shape::Type::sphere: r += b->colWorld.s.r; break;
+    case Collision::Shape::Type::capsule: r += b->colWorld.c.r; break;
+    case Collision::Shape::Type::obb: break;
     }
-  );
+    const float distance = r - glm::length(v) + 0.01f;
+    a->position += vn * distance;
+    a->colWorld.s.center += vn * distance;
+    if (a->velocity.y < 0 && v.y > FLT_EPSILON) {
+      a->velocity.y = 0;
+    } else if (a->velocity.y > 0 && v.y < FLT_EPSILON) {
+      a->velocity.y = 0;
+    }
+  } else {
+    const glm::vec3 deltaVelocity = a->velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
+    a->position -= deltaVelocity;
+    a->colWorld.s.center -= deltaVelocity;
+  }
 }
 
 /**
@@ -664,15 +660,9 @@ void MainGameScene::Update(float deltaTime)
   enemies.Update(deltaTime);
   effects.Update(deltaTime);
 
-  for (ActorPtr& e : enemies) {
-    SolveCollision(player, e);
-  }
-  for (ActorPtr& e : trees) {
-    SolveCollision(player, e);
-  }
-  for (ActorPtr& e : buildings) {
-    SolveCollision(player, e);
-  }
+  DetectCollision(player, enemies, PlayerObstacleCollisionHandler);
+  DetectCollision(player, trees, PlayerObstacleCollisionHandler);
+  DetectCollision(player, buildings, PlayerObstacleCollisionHandler);
 
 #if 1
 #else
