@@ -31,12 +31,239 @@
 */
 
 /**
+* プレイヤーが操作するアクター.
+*/
+class PlayerActor : public SkeletalMeshActor
+{
+public:
+  PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name, int hp, const glm::vec3& pos,
+    const glm::vec3& rot = glm::vec3(0), const glm::vec3& scale = glm::vec3(1));
+  virtual ~PlayerActor() = default;
+
+  virtual void Update(float) override;
+  void ProcessInput();
+  void SetHeightMap(const Terrain::HeightMap* p) { heightMap = p; }
+
+private:
+  bool CheckRun(const GamePad& gamepad);
+  bool CheckAttack(const GamePad& gamepad);
+  bool CheckGuard(const GamePad& gamepad);
+  bool CheckJump(const GamePad& gamepad);
+  bool CheckFall(float, float);
+
+  enum class State {
+    idle,
+    run,
+    jump,
+    lightAttack,
+    heavyAttack,
+    jumpAttack,
+    guard,
+    damage,
+    dead,
+  };
+  void SetState(State s) {
+    static const char* const names[] = {
+      "idle", "run", "jump", "lightAttack", "heavyAttack", "jumpAttack", "guard", "damage", "dead"
+    };
+    if (state != s) {
+      std::cout << "[INFO]" << __func__ << ":" << names[static_cast<int>(state)] << "->" << names[static_cast<int>(s)] << "\n";
+      state = s;
+    }
+  }
+
+  State state = State::idle;
+  float stateTimer = 0;
+  bool isGrounded = false;
+  Collision::Sphere  colWorldAttack;
+  const Terrain::HeightMap* heightMap = nullptr;
+};
+
+/**
 *
 */
 PlayerActor::PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name, int hp, const glm::vec3& pos,
   const glm::vec3& rot, const glm::vec3& scale)
   : SkeletalMeshActor(m, name, hp, pos, rot, scale)
 {
+  std::cout << "[INFO]" << __func__ << ": idle\n";
+}
+
+glm::vec3 GetMove(const GamePad& gamepad)
+{
+  const glm::vec3 dir(0, 0, -1);
+  const glm::vec3 left = glm::normalize(glm::cross(glm::vec3(0, 1, 0), dir));
+  glm::vec3 move(0);
+  if (gamepad.buttons & GamePad::DPAD_UP) {
+    move += dir;
+  } else if (gamepad.buttons & GamePad::DPAD_DOWN) {
+    move -= dir;
+  }
+  if (gamepad.buttons & GamePad::DPAD_LEFT) {
+    move += left;
+  } else if (gamepad.buttons & GamePad::DPAD_RIGHT) {
+    move -= left;
+  }
+  return move;
+}
+
+/**
+*
+*/
+bool PlayerActor::CheckRun(const GamePad& gamepad)
+{
+  glm::vec3 move = GetMove(gamepad);
+  if (glm::dot(move, move)) {
+    move = glm::normalize(move);
+    rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
+
+    const glm::vec3 right = glm::normalize(glm::cross(move, glm::vec3(0, 1, 0)));
+    const float frontY = heightMap->Height(position + move * 0.1f) - position.y - 0.01f;
+    const float rad = glm::clamp(std::atan2(frontY, 0.1f), glm::radians(-45.0f), glm::radians(60.0f));
+    move = glm::rotate(glm::mat4(1), rad, right) * glm::vec4(move, 1.0f);
+
+    const float speed = 5.0f;
+    velocity = move * speed;
+
+    if (GetMesh()->GetAnimation() != "Run") {
+      GetMesh()->Play("Run");
+    }
+    SetState(State::run);
+    return true;
+  }
+  return false;
+}
+
+/**
+*
+*/
+bool PlayerActor::CheckAttack(const GamePad& gamepad)
+{
+  if (gamepad.buttonDown & GamePad::A) {
+    GetMesh()->Play("Attack.Light", false);
+    stateTimer = GetMesh()->GetTotalAnimationTime();
+    SetState(State::lightAttack);
+    return true;
+  }
+  return false;
+}
+
+/**
+*
+*/
+bool PlayerActor::CheckGuard(const GamePad& gamepad)
+{
+  if (gamepad.buttons & GamePad::X) {
+    GetMesh()->Play("Guard", false);
+    stateTimer = GetMesh()->GetTotalAnimationTime();
+    SetState(State::guard);
+    return true;
+  }
+  return false;
+}
+
+/**
+*
+*/
+bool PlayerActor::CheckJump(const GamePad& gamepad)
+{
+  if (isGrounded && (gamepad.buttonDown & GamePad::B)) {
+    GetMesh()->Play("Jump");
+    static const float jumpVelocity = 5.0f;
+    velocity.y = jumpVelocity;
+    isGrounded = false;
+    SetState(State::jump);
+    return true;
+  }
+  return false;
+}
+
+/**
+*
+*/
+bool PlayerActor::CheckFall(float deltaTime, float groundHeight)
+{
+  if ((position.y - groundHeight >= 0.1f) && (velocity.y < -0.1f)) {
+    if (GetMesh()->GetAnimation() != "Fall") {
+      GetMesh()->Play("Fall");
+      isGrounded = false;
+      std::cout << "Fall";
+      SetState(State::jump);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+*
+*/
+void PlayerActor::ProcessInput()
+{
+  const Mesh::SkeletalMeshPtr& mesh = GetMesh();
+  const GamePad gamepad = GLFWEW::Window::Instance().GetGamePad();
+  switch (state) {
+  case State::idle:
+    // A -> attack
+    if (CheckAttack(gamepad)) {
+      // X -> guard
+    } else if (CheckGuard(gamepad)) {
+    } else {
+      // DPAD -> run
+      CheckRun(gamepad);
+      // B -> jump
+      CheckJump(gamepad);
+    }
+    break;
+  case State::run:
+    // A -> attack
+    if (CheckAttack(gamepad)) {
+      // X -> guard
+    } else if (CheckGuard(gamepad)) {
+    } else {
+      // DPAD -> run
+      CheckRun(gamepad);
+      // B -> jump
+      CheckJump(gamepad);
+    }
+    break;
+  case State::jump:
+    // A -> jumpAttack
+    if (gamepad.buttonDown & GamePad::A) {
+      mesh->Play("Attack.Jump", false);
+      stateTimer = mesh->GetTotalAnimationTime();
+      SetState(State::jumpAttack);
+    }
+    break;
+  case State::lightAttack:
+    // EOA(End Of Animation) -> idle
+    break;
+  case State::heavyAttack:
+    // EOA -> idle
+    break;
+  case State::jumpAttack:
+    // EOA -> jump
+    break;
+  case State::guard: {
+    glm::vec3 move = GetMove(gamepad);
+    if (dot(move, move)) {
+      move = glm::normalize(move);
+      rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
+    }
+    // Release X -> idle;
+    if (!(gamepad.buttons & GamePad::X)) {
+      mesh->Play("Idle");
+      SetState(State::idle);
+    }
+    break;
+  }
+  case State::damage:
+    // EOA -> idle
+    break;
+  case State::dead:
+    // Timer -> game over
+    break;
+  }
 }
 
 /**
@@ -44,19 +271,96 @@ PlayerActor::PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name
 */
 void PlayerActor::Update(float deltaTime)
 {
+  // 座標の更新.
   SkeletalMeshActor::Update(deltaTime);
+
+  // 接地判定.
+  static const float gravity = 9.8f;
+  const float groundHeight = heightMap->Height(position);
+  if (position.y <= groundHeight) {
+    position.y = groundHeight;
+    if (!isGrounded) {
+      velocity.y = 0;
+      isGrounded = true;
+    }
+  } else if (position.y > groundHeight) {
+    velocity.y -= gravity * deltaTime;
+    isGrounded = false;
+  }
+
+  // 速度の減衰.
+  if (isGrounded) {
+    const glm::vec3 velocityXZ(velocity.x, 0, velocity.z);
+    if (glm::dot(velocity, velocity) <= FLT_EPSILON) {
+      velocity = glm::vec3(0);
+    } else {
+      static const float dampingFactor = 30.0f;
+      glm::vec3 old = velocity;
+      velocity -= glm::normalize(velocity) * dampingFactor * deltaTime;
+      if (glm::dot(velocity, old) <= 0.0f) {
+        velocity = glm::vec3(0);
+      }
+    }
+  }
+
+  // 状態の更新.
   switch (state) {
-  case State::attack:
+  case State::run:
+    if (CheckFall(deltaTime, groundHeight)) {
+    } else if (glm::length(velocity) < 1.0f * deltaTime) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+    }
+    break;
+  case State::idle:
+    CheckFall(deltaTime, groundHeight);
+    break;
+  case State::jump:
+    if (isGrounded) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+    } else if (CheckFall(deltaTime, groundHeight)) {
+    }
+    break;
+  case State::guard:
+    CheckFall(deltaTime, groundHeight);
+    break;
+  case State::lightAttack:
+  case State::heavyAttack:
+    stateTimer += deltaTime;
     if (stateTimer > 0.1f && stateTimer < 0.3f) {
       const glm::vec3 front = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 0, 1)) * glm::vec4(0, 0, -1, 1);
       colWorldAttack.center = position + front;
       colWorldAttack.r = 0.5f;
     }
+    if (GetMesh()->IsFinished()) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+      CheckFall(deltaTime, groundHeight);
+    }
     break;
-  default:
+  case State::jumpAttack:
+    if (isGrounded) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+    } else if (GetMesh()->IsFinished()) {
+      if (position.y - gravity > 0) {
+        GetMesh()->Play("Jump");
+      } else {
+        GetMesh()->Play("Fall");
+      }
+      SetState(State::jump);
+    }
+    break;
+  case State::damage:
+    if (GetMesh()->IsFinished()) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+    }
+    break;
+  case State::dead:
     break;
   }
-  stateTimer += deltaTime;
 }
 
 /**
@@ -117,21 +421,24 @@ bool MainGameScene::Initialize()
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain", "Res/ColorMap.tga");
 
-  meshBuffer.LoadMesh("Res/oni_small.gltf");
-  meshBuffer.LoadMesh("Res/bikuni.gltf");
+  meshBuffer.LoadSkeletalMesh("Res/oni_small.gltf");
+  meshBuffer.LoadSkeletalMesh("Res/oni_medium.gltf");
+  meshBuffer.LoadSkeletalMesh("Res/bikuni.gltf");
   meshBuffer.LoadMesh("Res/weed_collection.gltf");
   meshBuffer.LoadMesh("Res/red_pine_tree.gltf");
   meshBuffer.LoadMesh("Res/farmers_house.gltf");
   meshBuffer.LoadMesh("Res/jizo_statue.gltf");
   meshBuffer.LoadMesh("Res/temple.gltf");
   meshBuffer.LoadMesh("Res/wood_well.gltf");
+  meshBuffer.LoadSkeletalMesh("Res/effect_hit.gltf");
 
   terrain = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("Terrain"), "Terrain", 100, glm::vec3(0));
 
   glm::vec3 startPos(100, 0, 150);
   startPos.y = heightMap.Height(startPos);
   {
-    player = std::make_shared<SkeletalMeshActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
+    player = std::make_shared<PlayerActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
+    player->SetHeightMap(&heightMap);
     player->GetMesh()->Play("Idle");
     player->colLocal = Collision::CreateSphere(glm::vec3(0, 0.7f, 0), 0.5f);
   }
@@ -141,21 +448,28 @@ bool MainGameScene::Initialize()
   static const size_t oniCount = 8;
   static const int oniRange = 5;
   static const size_t weedCount = 100;
+  static const float vegetationRangeScale = 10.0f / 31.6f;
 #else
   static const size_t treeCount = 1000;
   static const size_t oniCount = 100;
   static const int oniRange = 20;
   static const size_t weedCount = 1000;
+  static const int vegetationRangeScale = 1.0f;
 #endif
   std::mt19937 rand;
   rand.seed(0);
+  const glm::vec2 vegeRange(glm::vec2(heightMap.Size() - 2) * 0.5f * vegetationRangeScale);
+  const glm::vec2 vegeCenter(startPos.x, startPos.z);
+  const glm::vec2 vegeRangeMin = vegeCenter - vegeRange;
+  const glm::vec2 vegeRangeMax = vegeCenter + vegeRange;
   {
+
     trees.Reserve(treeCount);
     const Mesh::MeshPtr mesh = meshBuffer.GetMesh("RedPineTree");
     for (size_t i = 0; i < treeCount; ++i) {
       glm::vec3 position(0);
-      position.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
-      position.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
+      position.x = std::uniform_real_distribution<float>(vegeRangeMin.x, vegeRangeMax.x)(rand);
+      position.z = std::uniform_real_distribution<float>(vegeRangeMin.y, vegeRangeMax.y)(rand);
       position.y = heightMap.Height(position);
       glm::vec3 rotation(0);
       rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
@@ -176,8 +490,8 @@ bool MainGameScene::Initialize()
     };
     for (size_t i = 0; i < weedCount; ++i) {
       glm::vec3 position(0);
-      position.x = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().x - 2)(rand));
-      position.z = static_cast<float>(std::uniform_int_distribution<>(1, heightMap.Size().y - 2)(rand));
+      position.x = std::uniform_real_distribution<float>(vegeRangeMin.x, vegeRangeMax.x)(rand);
+      position.z = std::uniform_real_distribution<float>(vegeRangeMin.y, vegeRangeMax.y)(rand);
       position.y = heightMap.Height(position);
       glm::vec3 rotation(0);
       rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
@@ -192,7 +506,7 @@ bool MainGameScene::Initialize()
     glm::vec3 position = startPos + glm::vec3(20, 5, 3);
     position.y = heightMap.Height(position);
     StaticMeshActorPtr p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("FarmersHouse"), "FarmersHouse", 100, position);
-    p->colLocal = Collision::CreateOBB({ 0, 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0,0,-1 }, { 3, 4, 2.5 });
+    p->colLocal = Collision::CreateOBB({ 0, 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0,0,-1 }, { 2.5f, 3, 2.0f });
     buildings.Add(p);
 
     position = startPos + glm::vec3(12, 0, 20);
@@ -201,11 +515,17 @@ bool MainGameScene::Initialize()
 
     position = startPos + glm::vec3(-5, 0, 6);
     position.y = heightMap.Height(position);
-    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("JizoStatue"), "JizoStatue", 100, position, glm::vec3(0, 1.5f, 0)));
+    p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("JizoStatue"), "JizoStatue", 100, position, glm::vec3(0, 1.5f, 0));
+    p->colLocal = Collision::CreateCapsule(glm::vec3(0, -1, 0), glm::vec3(0, 1, 0), 0.25f);
+    buildings.Add(p);
 
     position = startPos + glm::vec3(-20, 0, 25);
     position.y = heightMap.Height(position);
-    buildings.Add(std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("WoodWell"), "WoodWell", 100, position, glm::vec3(0, 1.5f, 0)));
+    p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("WoodWell"), "WoodWell", 100, position, glm::vec3(0, glm::radians(30.0f), 0));
+    // 軸回転テスト
+    const glm::mat4 matR = glm::rotate(glm::mat4(1), glm::radians(0.0f), glm::vec3(0, 1, 0));
+    p->colLocal = Collision::CreateOBB({ 0, 0, 0 }, matR * glm::vec4(1, 0, 0, 1), matR * glm::vec4(0, 1, 0, 1), matR * glm::vec4(0, 0,-1, 1), {1, 2, 1});
+    buildings.Add(p);
   }
 
   {
@@ -219,13 +539,31 @@ bool MainGameScene::Initialize()
       rotation.y = std::uniform_real_distribution<float>(0, glm::two_pi<float>())(rand);
       glm::vec3 scale = glm::vec3(std::normal_distribution<float>(0.0f, 1.0f)(rand) + 0.5f);
       scale = glm::clamp(scale, 0.75f, 1.25f);
-      const Mesh::SkeletalMeshPtr mesh = meshBuffer.GetSkeletalMesh("oni_small");
+      Mesh::SkeletalMeshPtr mesh;
+      if (i % 5) {
+        mesh = meshBuffer.GetSkeletalMesh("oni_small");
+      } else {
+        mesh = meshBuffer.GetSkeletalMesh("OniMedium");
+      }
       const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
       mesh->Play(animList[i % animList.size()].name);
       SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale);
       p->colLocal = Collision::CreateSphere({ 0, 0.7f, 0 }, 0.5f);
       enemies.Add(p);
     }
+  }
+
+  effects.Reserve(100);
+  {
+    glm::vec3 position(startPos + glm::vec3(3, 0, -6));
+    position.y = heightMap.Height(position) + 1;
+    const Mesh::SkeletalMeshPtr mesh = meshBuffer.GetSkeletalMesh("HitEffect");
+    const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
+    if (!animList.empty()) {
+      mesh->Play(animList[0].name);
+    }
+    SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "HitEffect", 1, position, glm::vec3(0), glm::vec3(0.5));
+    effects.Add(p);
   }
 
   return true;
@@ -238,7 +576,9 @@ void MainGameScene::ProcessInput()
 {
   if (IsActive()) {
     GLFWEW::Window& window = GLFWEW::Window::Instance();
-
+#if 1
+    player->ProcessInput();
+#else
     if (actionWaitTimer <= 0) {
       const GamePad gamepad = window.GetGamePad();
       if (gamepad.buttonDown & GamePad::A) {
@@ -273,7 +613,7 @@ void MainGameScene::ProcessInput()
         }
       }
     }
-
+#endif
     // シーン切り替え.
     const GamePad gamepad = window.GetGamePad();
     if (gamepad.buttonDown & GamePad::START) {
@@ -322,6 +662,7 @@ void MainGameScene::Update(float deltaTime)
   vegetations.Update(deltaTime);
   buildings.Update(deltaTime);
   enemies.Update(deltaTime);
+  effects.Update(deltaTime);
 
   for (ActorPtr& e : enemies) {
     SolveCollision(player, e);
@@ -333,6 +674,8 @@ void MainGameScene::Update(float deltaTime)
     SolveCollision(player, e);
   }
 
+#if 1
+#else
   {
     const glm::vec3 velocityXZ(player->velocity.x, 0, player->velocity.z);
     if (glm::dot(velocityXZ, velocityXZ) <= FLT_EPSILON) {
@@ -365,6 +708,7 @@ void MainGameScene::Update(float deltaTime)
       }
     }
   }
+#endif
 
   player->UpdateDrawData(deltaTime);
   terrain->UpdateDrawData(deltaTime);
@@ -372,6 +716,7 @@ void MainGameScene::Update(float deltaTime)
   vegetations.UpdateDrawData(deltaTime);
   buildings.UpdateDrawData(deltaTime);
   enemies.UpdateDrawData(deltaTime);
+  effects.UpdateDrawData(deltaTime);
 }
 
 /**
@@ -409,6 +754,7 @@ void MainGameScene::Render()
 
     player->Draw();
     enemies.Draw();
+    effects.Draw();
   }
 
   const glm::vec2 screenSize(window.Width(), window.Height());

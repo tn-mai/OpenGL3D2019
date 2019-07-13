@@ -11,34 +11,7 @@
 #include "../Font.h"
 #include "../Terrain.h"
 
-/**
-* プレイヤーが操作するアクター.
-*/
-class PlayerActor : public SkeletalMeshActor
-{
-public:
-  PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name, int hp, const glm::vec3& pos,
-    const glm::vec3& rot = glm::vec3(0), const glm::vec3& scale = glm::vec3(1));
-  virtual ~PlayerActor() = default;
-
-  virtual void Update(float) override;
-
-private:
-  enum class State {
-    idle,
-    run,
-    jump,
-    attack,
-    jumpAttack,
-    guard,
-    damage,
-    dead,
-  };
-  State state = State::idle;
-  float stateTimer = 0;
-  bool isGrounded = false;
-  Collision::Sphere  colWorldAttack;
-};
+class PlayerActor;
 
 /**
 * メインゲーム画面.
@@ -57,12 +30,13 @@ public:
 private:
   Font::Renderer fontRenderer;
   Mesh::Buffer meshBuffer;
-  SkeletalMeshActorPtr player;
+  std::shared_ptr<PlayerActor> player;
   StaticMeshActorPtr terrain;
   ActorList trees;
   ActorList vegetations;
   ActorList buildings;
   ActorList enemies;
+  ActorList effects;
 
   Terrain::HeightMap heightMap;
 
