@@ -273,9 +273,9 @@ bool Buffer::AddMesh(const char* name, const Primitive& primitive, const Materia
 MeshPtr Buffer::GetMesh(const char* meshName) const
 {
   for (const auto& f : files) {
-    for (int i = 0; i < f.second->meshes.size(); ++i) {
+    for (size_t i = 0; i < f.second->meshes.size(); ++i) {
       if (f.second->meshes[i].name == meshName) {
-        return std::make_shared<Mesh>(f.second, i);
+        return std::make_shared<Mesh>(f.second, static_cast<int>(i));
       }
     }
   }
