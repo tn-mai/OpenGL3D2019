@@ -41,8 +41,13 @@ public:
   virtual ~PlayerActor() = default;
 
   virtual void Update(float) override;
+  virtual void UpdateDrawData(float) override;
+  virtual void Draw() override;
   void ProcessInput();
   void SetHeightMap(const Terrain::HeightMap* p) { heightMap = p; }
+  const ActorPtr& GetAttackCollision() const { return attackCollision; }
+  void ClearAttackCollision() { attackCollision.reset(); }
+  void SetMeshBuffer(Mesh::Buffer* b) { buffer = b; }
 
 private:
   bool CheckRun(const GamePad& gamepad);
@@ -75,8 +80,9 @@ private:
   State state = State::idle;
   float stateTimer = 0;
   bool isGrounded = false;
-  Collision::Sphere  colWorldAttack;
+  ActorPtr attackCollision;
   const Terrain::HeightMap* heightMap = nullptr;
+  Mesh::Buffer* buffer = nullptr;
 };
 
 /**
@@ -328,14 +334,21 @@ void PlayerActor::Update(float deltaTime)
   case State::lightAttack:
   case State::heavyAttack:
     stateTimer += deltaTime;
-    if (stateTimer > 0.1f && stateTimer < 0.3f) {
-      const glm::vec3 front = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 0, 1)) * glm::vec4(0, 0, -1, 1);
-      colWorldAttack.center = position + front;
-      colWorldAttack.r = 0.5f;
+    if (stateTimer > 0.1f && stateTimer < 1.0f) {
+      if (!attackCollision) {
+        static const float radian = 0.5f;
+        const glm::vec3 front = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, 1.5f, 1);
+        attackCollision = std::make_shared<StaticMeshActor>(buffer->GetMesh("Sphere"), "PlayerAttackCollision", 5, position + front + glm::vec3(0, 1, 0), glm::vec3(0), glm::vec3(radian));
+        attackCollision->colLocal = Collision::CreateSphere(glm::vec3(0), radian);
+      }
+    } else {
+      ClearAttackCollision();
     }
     if (GetMesh()->IsFinished()) {
+      stateTimer = 0;
       GetMesh()->Play("Idle");
       SetState(State::idle);
+      ClearAttackCollision();
       CheckFall(deltaTime, groundHeight);
     }
     break;
@@ -360,6 +373,32 @@ void PlayerActor::Update(float deltaTime)
     break;
   case State::dead:
     break;
+  }
+
+  if (attackCollision) {
+    attackCollision->Update(deltaTime);
+  }
+}
+
+/**
+*
+*/
+void PlayerActor::UpdateDrawData(float deltaTime)
+{
+  SkeletalMeshActor::UpdateDrawData(deltaTime);
+  if (attackCollision) {
+    attackCollision->UpdateDrawData(deltaTime);
+  }
+}
+
+/**
+*
+*/
+void PlayerActor::Draw()
+{
+  SkeletalMeshActor::Draw();
+  if (attackCollision) {
+    attackCollision->Draw();
   }
 }
 
@@ -417,6 +456,7 @@ bool MainGameScene::Initialize()
   heightMap.Load("Res/HeightMap.tga", 100.0f, 0.5f);
   heightMap.CreateMesh(meshBuffer, "Terrain", "Res/ColorMap.tga");
 
+  meshBuffer.CreateSphere("Sphere", 8, 8);
   meshBuffer.LoadSkeletalMesh("Res/oni_small.gltf");
   meshBuffer.LoadSkeletalMesh("Res/oni_medium.gltf");
   meshBuffer.LoadSkeletalMesh("Res/bikuni.gltf");
@@ -435,6 +475,7 @@ bool MainGameScene::Initialize()
   {
     player = std::make_shared<PlayerActor>(meshBuffer.GetSkeletalMesh("Bikuni"), "Player", 20, startPos);
     player->SetHeightMap(&heightMap);
+    player->SetMeshBuffer(&meshBuffer);
     player->GetMesh()->Play("Idle");
     player->colLocal = Collision::CreateSphere(glm::vec3(0, 0.7f, 0), 0.5f);
   }
@@ -541,8 +582,7 @@ bool MainGameScene::Initialize()
       } else {
         mesh = meshBuffer.GetSkeletalMesh("OniMedium");
       }
-      const std::vector<Mesh::Animation>& animList = mesh->GetAnimationList();
-      mesh->Play(animList[i % animList.size()].name);
+      mesh->Play("Wait");
       SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale);
       p->colLocal = Collision::CreateSphere({ 0, 0.7f, 0 }, 0.5f);
       enemies.Add(p);
@@ -658,11 +698,60 @@ void MainGameScene::Update(float deltaTime)
   vegetations.Update(deltaTime);
   buildings.Update(deltaTime);
   enemies.Update(deltaTime);
+  for (auto& e : enemies) {
+    SkeletalMeshActorPtr enemy = std::static_pointer_cast<SkeletalMeshActor>(e);
+    Mesh::SkeletalMeshPtr mesh = enemy->GetMesh();
+    if (mesh->IsFinished()) {
+      if (mesh->GetAnimation() == "Down") {
+        enemy->health = 0;
+      } else {
+        mesh->Play("Wait");
+      }
+    }
+  }
   effects.Update(deltaTime);
+  for (auto& e : effects) {
+    Mesh::SkeletalMeshPtr mesh = std::static_pointer_cast<SkeletalMeshActor>(e)->GetMesh();
+    if (mesh->IsFinished()) {
+      e->health = 0;
+    }
+  }
 
   DetectCollision(player, enemies, PlayerObstacleCollisionHandler);
   DetectCollision(player, trees, PlayerObstacleCollisionHandler);
   DetectCollision(player, buildings, PlayerObstacleCollisionHandler);
+
+  ActorPtr attackCollision = player->GetAttackCollision();
+  if (attackCollision) {
+    bool hit = false;
+    DetectCollision(attackCollision, enemies,
+      [this, &hit](const ActorPtr& a, const ActorPtr& b, const glm::vec3& p) {
+        SkeletalMeshActorPtr bb = std::static_pointer_cast<SkeletalMeshActor>(b);
+        bb->health -= a->health;
+        if (bb->health <= 0) {
+          bb->colLocal = Collision::Shape{};
+          bb->health = 1;
+          bb->GetMesh()->Play("Down", false);
+        } else {
+          bb->GetMesh()->Play("Hit", false);
+        }
+        std::cerr << "[INFO] enemy hp=" << bb->health << "\n";
+
+        auto mesh = meshBuffer.GetSkeletalMesh("HitEffect");
+        mesh->Play(mesh->GetAnimationList()[0].name, false);
+        glm::vec3 rot = player->rotation;
+        rot.y += glm::radians(180.0f);
+        auto effect = std::make_shared<SkeletalMeshActor>(mesh, "HitEffect", 1, p, rot, glm::vec3(0.75f));
+        effects.Add(effect);
+        hit = true;
+      }
+    );
+    if (hit) {
+      attackCollision->health = 0;
+    }
+  }
+  enemies.RemoveDead();
+  effects.RemoveDead();
 
 #if 1
 #else
