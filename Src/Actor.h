@@ -94,6 +94,7 @@ public:
   void Reserve(size_t);
   void Add(const ActorPtr&);
   bool Remove(const ActorPtr&);
+  void RemoveDead();
   void Clear();
   void Update(float);
   void UpdateDrawData(float);

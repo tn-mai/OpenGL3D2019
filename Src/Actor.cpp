@@ -4,6 +4,7 @@
 #include "Actor.h"
 #include "SkeletalMesh.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 
 /**
 * コンストラクタ.
@@ -259,6 +260,15 @@ ActorPtr ActorList::Find(const std::string& name) const
     }
   }
   return nullptr;
+}
+
+/**
+*
+*/
+void ActorList::RemoveDead()
+{
+  actors.erase(std::remove_if(actors.begin(), actors.end(),
+    [](const ActorPtr& actor) { return actor->health <= 0; }), actors.end());
 }
 
 /**
