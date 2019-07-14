@@ -131,6 +131,35 @@ Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3
   return result;
 }
 
+/**
+* @param a  判定対象のシェイプその１.
+* @param b  判定対象のシェイプその２.
+* @param p  衝突した座標.
+*
+* @retval true  衝突した.
+* @retval false 衝突しなかった.
+*/
+bool IsCollision(const Shape& a, const Shape& b, glm::vec3* p)
+{
+  if (a.type == Shape::Type::sphere) {
+    if (b.type == Shape::Type::sphere) {
+      if (TestSphereSphere(a.s, b.s)) {
+        *p = b.s.center;
+        return true;
+      }
+    } else if (b.type == Shape::Type::capsule) {
+      if (TestSphereCapsule(a.s, b.c, p)) {
+        return true;
+      }
+    } else if (b.type == Shape::Type::obb) {
+      if (Collision::TestSphereOBB(a.s, b.obb, p)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 
 
 

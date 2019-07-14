@@ -273,26 +273,10 @@ ActorPtr ActorList::Find(const std::string& name) const
 */
 bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
 {
-  if (a->colWorld.type == Collision::Shape::Type::sphere) {
-    Collision::Sphere& colA = a->colWorld.s;
-    if (b->colWorld.type == Collision::Shape::Type::sphere) {
-      if (Collision::TestSphereSphere(colA, b->colWorld.s)) {
-        handler(a, b, b->colWorld.s.center);
-        return true;
-      }
-    } else if (b->colWorld.type == Collision::Shape::Type::capsule) {
-      glm::vec3 p;
-      if (Collision::TestSphereCapsule(colA, b->colWorld.c, &p)) {
-        handler(a, b, p);
-        return true;
-      }
-    } else if (b->colWorld.type == Collision::Shape::Type::obb) {
-      glm::vec3 p;
-      if (Collision::TestSphereOBB(colA, b->colWorld.obb, &p)) {
-        handler(a, b, p);
-        return true;
-      }
-    }
+  glm::vec3 p;
+  if (Collision::IsCollision(a->colWorld, b->colWorld, &p)) {
+    handler(a, b, p);
+    return true;
   }
   return false;
 }
