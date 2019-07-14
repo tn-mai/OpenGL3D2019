@@ -28,7 +28,7 @@ bool TestSphereSphere(const Sphere& s0, const Sphere& s1)
 /**
 * ü•ª‚Æ“_‚ÌÅ‹ßÚ“_‚ğ’²‚×‚é.
 */
-glm::vec3 ClosestPointLine(const Line& l, const glm::vec3& p)
+glm::vec3 ClosestPointLine(const Segment& l, const glm::vec3& p)
 {
   const glm::vec3 v = l.b - l.a;
   const glm::vec3 m = p - l.a;
@@ -47,7 +47,7 @@ glm::vec3 ClosestPointLine(const Line& l, const glm::vec3& p)
 */
 bool TestSphereCapsule(const Sphere& s, const Capsule& c, glm::vec3* p)
 {
-  *p = ClosestPointLine(c.line, s.center);
+  *p = ClosestPointLine(c.seg, s.center);
   const glm::vec3 distance = *p - s.center;
   const float radiusSum = s.r + c.r;
   return dot(distance, distance) <= radiusSum * radiusSum;

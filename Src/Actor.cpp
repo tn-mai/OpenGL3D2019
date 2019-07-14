@@ -42,8 +42,8 @@ void Actor::Update(float deltaTime)
     break;
 
   case Collision::Shape::Type::capsule:
-    colWorld.c.line.a += position;
-    colWorld.c.line.b += position;
+    colWorld.c.seg.a += position;
+    colWorld.c.seg.b += position;
     break;
 
   case Collision::Shape::Type::obb: {

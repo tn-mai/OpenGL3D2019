@@ -19,7 +19,7 @@ struct Sphere {
 /**
 * ü•ª.
 */
-struct Line {
+struct Segment {
   glm::vec3 a = glm::vec3(0);
   glm::vec3 b = glm::vec3(0);
 };
@@ -28,7 +28,7 @@ struct Line {
 * ƒJƒvƒZƒ‹.
 */
 struct Capsule {
-  Line line;
+  Segment seg;
   float r = 0;
 };
 
@@ -45,7 +45,7 @@ bool TestSphereSphere(const Sphere&, const Sphere&);
 bool TestSphereCapsule(const Sphere& s, const Capsule& c, glm::vec3* p);
 bool TestSphereOBB(const Sphere& s, const OrientedBoundingBox& obb, glm::vec3* p);
 
-glm::vec3 ClosestPointLine(const Line& l, const glm::vec3& p);
+glm::vec3 ClosestPointLine(const Segment& l, const glm::vec3& p);
 glm::vec3 ClosestPointOBB(const OrientedBoundingBox& obb, const glm::vec3& p);
 
 /**
