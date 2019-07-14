@@ -54,11 +54,12 @@ glm::vec3 ClosestPointOBB(const OrientedBoundingBox& obb, const glm::vec3& p);
 struct Shape
 {
   enum class Type {
+    none,
     sphere,
     capsule,
     obb,
   };
-  Type type = Type::sphere;
+  Type type = Type::none;
   Sphere s;
   Capsule c;
   OrientedBoundingBox obb;
