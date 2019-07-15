@@ -68,7 +68,7 @@ struct Shape
 Shape CreateSphere(const glm::vec3& center, float r);
 Shape CreateCapsule(const glm::vec3& a, const glm::vec3& b, float r);
 Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3& axisY, const glm::vec3& axisZ, const glm::vec3& e);
-bool IsCollision(const Shape&, const Shape&, glm::vec3*);
+bool TestShapeShape(const Shape&, const Shape&, glm::vec3*);
 
 
 

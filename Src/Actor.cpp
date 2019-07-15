@@ -36,28 +36,32 @@ void Actor::Update(float deltaTime)
 {
   position += velocity * deltaTime;
 
-  colWorld = colLocal;
-  switch (colWorld.type) {
+  const glm::mat4 matT = glm::translate(glm::mat4(1), position);
+  const glm::mat4 matR_Y = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0));
+  const glm::mat4 matR_ZY = glm::rotate(matR_Y, rotation.z, glm::vec3(0, 0, -1));
+  const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
+  const glm::mat4 matS = glm::scale(glm::mat4(1), scale);
+  const glm::mat4 matModel = matT * matR_XZY * matS;
+  colWorld.type = colLocal.type;
+  switch (colLocal.type) {
   case Collision::Shape::Type::sphere:
-    colWorld.s.center += position;
+    colWorld.s.center = matModel * glm::vec4(colLocal.s.center, 1);
+    colWorld.s.r = colLocal.s.r;
     break;
 
   case Collision::Shape::Type::capsule:
-    colWorld.c.seg.a += position;
-    colWorld.c.seg.b += position;
+    colWorld.c.seg.a = matModel * glm::vec4(colLocal.c.seg.a, 1);
+    colWorld.c.seg.b = matModel * glm::vec4(colLocal.c.seg.b, 1);
+    colWorld.c.r = colLocal.c.r;
     break;
 
-  case Collision::Shape::Type::obb: {
-    const glm::mat4 matR_Y = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0));
-    const glm::mat4 matR_ZY = glm::rotate(matR_Y, rotation.z, glm::vec3(0, 0, -1));
-    const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
-    colWorld.obb.center += position;
-    colWorld.obb.e *= scale;
-    for (glm::vec3& e : colWorld.obb.axis) {
-      e = matR_XZY * glm::vec4(e, 1);
+  case Collision::Shape::Type::obb:
+    colWorld.obb.center = matModel * glm::vec4(colLocal.obb.center, 1);
+    colWorld.obb.e = colLocal.obb.e;
+    for (size_t i = 0; i < 3; ++i) {
+      colWorld.obb.axis[i] = glm::mat3(matR_XZY) * colLocal.obb.axis[i];
     }
     break;
-  }
   }
 }
 
@@ -284,7 +288,7 @@ void ActorList::RemoveDead()
 bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler)
 {
   glm::vec3 p;
-  if (Collision::IsCollision(a->colWorld, b->colWorld, &p)) {
+  if (Collision::TestShapeShape(a->colWorld, b->colWorld, &p)) {
     handler(a, b, p);
     return true;
   }

@@ -132,6 +132,8 @@ Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3
 }
 
 /**
+* シェイプ同士が衝突しているか調べる.
+*
 * @param a  判定対象のシェイプその１.
 * @param b  判定対象のシェイプその２.
 * @param p  衝突した座標.
@@ -139,7 +141,7 @@ Shape CreateOBB(const glm::vec3& center, const glm::vec3& axisX, const glm::vec3
 * @retval true  衝突した.
 * @retval false 衝突しなかった.
 */
-bool IsCollision(const Shape& a, const Shape& b, glm::vec3* p)
+bool TestShapeShape(const Shape& a, const Shape& b, glm::vec3* p)
 {
   if (a.type == Shape::Type::sphere) {
     if (b.type == Shape::Type::sphere) {
