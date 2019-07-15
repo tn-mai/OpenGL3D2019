@@ -466,6 +466,7 @@ bool MainGameScene::Initialize()
   meshBuffer.LoadMesh("Res/jizo_statue.gltf");
   meshBuffer.LoadMesh("Res/temple.gltf");
   meshBuffer.LoadMesh("Res/wood_well.gltf");
+  meshBuffer.LoadMesh("Res/wall_stone.gltf");
   meshBuffer.LoadSkeletalMesh("Res/effect_hit.gltf");
 
   terrain = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("Terrain"), "Terrain", 100, glm::vec3(0));
@@ -556,6 +557,12 @@ bool MainGameScene::Initialize()
     p->colLocal = Collision::CreateCapsule(glm::vec3(0, -1, 0), glm::vec3(0, 1, 0), 0.25f);
     buildings.Add(p);
 
+    position = startPos + glm::vec3(20, 0, 10);
+    position.y = heightMap.Height(position);
+    p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("StoneWall"), "StoneWall", 100, position, glm::vec3(0, -0.5f, 0));
+    p->colLocal = Collision::CreateOBB({ 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0,-1 }, { 2, 2, 0.5f });
+    buildings.Add(p);
+
     position = startPos + glm::vec3(-20, 0, 25);
     position.y = heightMap.Height(position);
     p = std::make_shared<StaticMeshActor>(meshBuffer.GetMesh("WoodWell"), "WoodWell", 100, position, glm::vec3(0, glm::radians(30.0f), 0));
@@ -584,7 +591,7 @@ bool MainGameScene::Initialize()
       }
       mesh->Play("Wait");
       SkeletalMeshActorPtr p = std::make_shared<SkeletalMeshActor>(mesh, "Kooni", 13, position, rotation, scale);
-      p->colLocal = Collision::CreateSphere({ 0, 0.7f, 0 }, 0.5f);
+      p->colLocal = Collision::CreateCapsule({ 0, 0.5f, 0 }, {0, 1, 0}, 0.5f);
       enemies.Add(p);
     }
   }
