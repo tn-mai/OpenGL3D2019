@@ -10,8 +10,7 @@
 #include "../Shader.h"
 #include "../Font.h"
 #include "../Terrain.h"
-
-class PlayerActor;
+#include "../Actor/PlayerActor.h"
 
 /**
 * ƒƒCƒ“ƒQ[ƒ€‰æ–Ê.
@@ -30,7 +29,7 @@ public:
 private:
   Font::Renderer fontRenderer;
   Mesh::Buffer meshBuffer;
-  std::shared_ptr<PlayerActor> player;
+  PlayerActorPtr player;
   StaticMeshActorPtr terrain;
   ActorList trees;
   ActorList vegetations;

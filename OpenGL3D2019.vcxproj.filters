@@ -15,6 +15,9 @@
     <Filter Include="Src\json11">
       <UniqueIdentifier>{8f2b3ac9-20d3-49d4-ae99-3323089b067a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Src\Actor">
+      <UniqueIdentifier>{403ccf32-119b-45b2-8415-58a33d077e5a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Main.cpp">
@@ -74,6 +77,9 @@
     <ClCompile Include="Src\Collision.cpp">
       <Filter>Src</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Actor\PlayerActor.cpp">
+      <Filter>Src\Actor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Scene.h">
@@ -132,6 +138,9 @@
     </ClInclude>
     <ClInclude Include="Src\Collision.h">
       <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Actor\PlayerActor.h">
+      <Filter>Src\Actor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
