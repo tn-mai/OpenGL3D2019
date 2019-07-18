@@ -3,7 +3,7 @@
 */
 #ifndef PLAYERACTOR_H_INCLUDED
 #define PLAYERACTOR_H_INCLUDED
-#include "../Actor.h"
+#include "../SkeletalMeshActor.h"
 #include "../GLFWEW.h"
 #include "../Terrain.h"
 

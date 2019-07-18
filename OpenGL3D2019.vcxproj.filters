@@ -80,6 +80,9 @@
     <ClCompile Include="Src\Actor\PlayerActor.cpp">
       <Filter>Src\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Src\SkeletalMeshActor.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Scene.h">
@@ -141,6 +144,9 @@
     </ClInclude>
     <ClInclude Include="Src\Actor\PlayerActor.h">
       <Filter>Src\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\SkeletalMeshActor.h">
+      <Filter>Src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

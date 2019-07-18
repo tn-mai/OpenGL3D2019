@@ -151,6 +151,7 @@
     <ClCompile Include="Src\Scenes\TitleScene.cpp" />
     <ClCompile Include="Src\Shader.cpp" />
     <ClCompile Include="Src\SkeletalMesh.cpp" />
+    <ClCompile Include="Src\SkeletalMeshActor.cpp" />
     <ClCompile Include="Src\Sprite.cpp" />
     <ClCompile Include="Src\Terrain.cpp" />
     <ClCompile Include="Src\Texture.cpp" />
@@ -173,6 +174,7 @@
     <ClInclude Include="Src\Scenes\TitleScene.h" />
     <ClInclude Include="Src\Shader.h" />
     <ClInclude Include="Src\SkeletalMesh.h" />
+    <ClInclude Include="Src\SkeletalMeshActor.h" />
     <ClInclude Include="Src\Sprite.h" />
     <ClInclude Include="Src\Terrain.h" />
     <ClInclude Include="Src\Texture.h" />
