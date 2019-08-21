@@ -41,6 +41,7 @@ class Image2D
 {
 public:
   static Image2DPtr Create(const char*);
+  static Image2DPtr Create(const char* name, GLsizei width, GLsizei height, const GLvoid* data, GLenum format, GLenum type);
 
   ~Image2D();
   bool IsNull() const;
@@ -55,6 +56,7 @@ public:
 private:
   Image2D() = default;
   explicit Image2D(const char*);
+  Image2D(const char*, GLuint);
 
   std::string name; ///< テクスチャファイル名.
   GLuint id = 0;

@@ -634,6 +634,23 @@ Image2D::Image2D(const char* path)
 }
 
 /**
+* コンストラクタ.
+*
+* @param id テクスチャID.
+*/
+Image2D::Image2D(const char* name, GLuint id) : id(id)
+{
+  if (id) {
+    this->name = name;
+    const GLenum target = Target();
+    glBindTexture(target, id);
+    glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(target, 0, GL_TEXTURE_HEIGHT, &height);
+    glBindTexture(target, 0);
+  }
+}
+
+/**
 * デストラクタ.
 */
 Image2D::~Image2D()
@@ -692,6 +709,24 @@ Image2DPtr Image2D::Create(const char* path)
     Impl(const char* path) : Image2D(path) {}
   };
   return std::make_shared<Impl>(path);
+}
+
+/**
+* 2Dテクスチャを作成する.
+*
+* @param width   テクスチャの幅(ピクセル数).
+* @param height  テクスチャの高さ(ピクセル数).
+* @param data    テクスチャデータへのポインタ.
+* @param format  転送元画像のデータ形式.
+* @param type    転送元画像のデータ格納形式.
+*
+*/
+Image2DPtr Image2D::Create(const char* name, GLsizei width, GLsizei height, const GLvoid* data, GLenum format, GLenum type)
+{
+  struct Impl : Image2D {
+    Impl(const char* name, GLuint id) : Image2D(name, id) {}
+  };
+  return std::make_shared<Impl>(name, CreateImage2D(width, height, data, format, type));
 }
 
 } // namespace Texture
