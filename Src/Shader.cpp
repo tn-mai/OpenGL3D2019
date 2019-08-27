@@ -137,6 +137,7 @@ Program::Program(const char* vsPath, const char* fsPath)
     locMatVP = glGetUniformLocation(id, "matVP");
     locMatModel = glGetUniformLocation(id, "matModel");
     locMatNormal = glGetUniformLocation(id, "matNormal");
+    locModelColor = glGetUniformLocation(id, "modelColor");
   }
 }
 
@@ -253,6 +254,18 @@ void Program::SetUniformInt(GLint location, GLint value) const
 {
   if (id) {
     return glUniform1i(location, value);
+  }
+}
+
+/**
+* ƒ‚ƒfƒ‹‚Ì•`‰æF‚ðÝ’è‚·‚é.
+*
+* @param c  •`‰æF.
+*/
+void Program::SetModelColor(const glm::vec4& c) const
+{
+  if (locModelColor >= 0) {
+    glUniform4fv(locModelColor, 1, &c.x);
   }
 }
 

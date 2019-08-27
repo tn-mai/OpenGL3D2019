@@ -106,7 +106,7 @@ struct Mesh
 {
   Mesh() = default;
   Mesh(const FilePtr& f, int n) : file(f), meshNo(n) {}
-  void Draw(const glm::mat4& matModel) const;
+  void Draw(const glm::mat4& matModel, const glm::vec4& color = glm::vec4(1)) const;
 
   std::string name;
   FilePtr file;

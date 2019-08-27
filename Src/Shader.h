@@ -31,6 +31,7 @@ public:
   bool BindUniformBlock(const char* blockName, GLuint bindingPoint);
   GLint GetUniformLocation(const char* uniformName) const;
   void SetUniformInt(GLint location, GLint value) const;
+  void SetModelColor(const glm::vec4&) const;
   GLuint Id() const { return id; }
 
 private:
@@ -38,6 +39,7 @@ private:
   GLint locMatVP = -1;
   GLint locMatModel = -1;
   GLint locMatNormal = -1;
+  GLint locModelColor = -1;
 };
 using ProgramPtr = std::shared_ptr<Program>;
 

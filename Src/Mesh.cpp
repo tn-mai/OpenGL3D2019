@@ -80,7 +80,7 @@ Primitive Buffer::CreatePrimitive(size_t count, GLenum type, size_t iOffset, siz
 *
 * 事前にVAOをバインドしておくこと.
 */
-void Mesh::Draw(const glm::mat4& matModel) const
+void Mesh::Draw(const glm::mat4& matModel, const glm::vec4& color) const
 {
   if (!file || meshNo < 0) {
     return;
@@ -112,7 +112,7 @@ void Mesh::Draw(const glm::mat4& matModel) const
           prevTexId = texId;
         }
       }
-      //program->SetMaterialColor(m.baseColor);
+      m.program->SetModelColor(color);
     }
     glDrawElementsBaseVertex(prim.mode, prim.count, prim.type, prim.indices, prim.baseVertex);
     prim.vao->Unbind();
