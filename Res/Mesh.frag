@@ -19,11 +19,16 @@ uniform sampler2D texColor;
 */
 void main()
 {
+  vec3 normal = inNormal;
+  if (gl_FrontFacing == false) {
+    normal *= -1;
+  }
+
   fragColor = inColor * texture(texColor, inTexCoord);
-  if (fragColor.a < 0.75) {
+  if (fragColor.a < 0.25) {
     discard;
   }
   vec3 vLight = normalize(vec3(1, -1.5, -1));
-  float power = max(dot(normalize(inNormal), -vLight), 0.0) + 0.2;
+  float power = max(dot(normalize(normal), -vLight), 0.0) + 0.2;
   fragColor.rgb *= power;
 }
