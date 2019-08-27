@@ -22,6 +22,7 @@ bool GameOverScene::Initialize()
 {
   fontRenderer.Init(1000);
   fontRenderer.LoadFromFile("Res/font.fnt");
+  SceneFader::Instance().FadeIn(1);
   return true;
 }
 
@@ -30,10 +31,17 @@ bool GameOverScene::Initialize()
 */
 void GameOverScene::ProcessInput()
 {
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-  const GamePad gamepad = window.GetGamePad();
-  if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
-    SceneStack::Instance().Replace(std::make_shared<TitleScene>());
+  if (!SceneFader::Instance().IsFading()) {
+    if (isNextScene) {
+      SceneStack::Instance().Replace(std::make_shared<TitleScene>());
+    } else {
+      GLFWEW::Window& window = GLFWEW::Window::Instance();
+      const GamePad gamepad = window.GetGamePad();
+      if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
+        SceneFader::Instance().FadeOut(1);
+        isNextScene = true;
+      }
+    }
   }
 }
 

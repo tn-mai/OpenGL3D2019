@@ -148,6 +148,9 @@
     <ClInclude Include="Src\SkeletalMeshActor.h">
       <Filter>Src</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Actor\ObjectiveActor.h">
+      <Filter>Src\Actor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

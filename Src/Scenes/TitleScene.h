@@ -24,6 +24,7 @@ private:
   std::vector<Sprite> sprites;
   SpriteRenderer spriteRenderer;
   Font::Renderer fontRenderer;
+  bool isNext = false;
 };
 
 #endif // TITLESCENE_H_INCLUDED

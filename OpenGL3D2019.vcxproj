@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Actor.h" />
+    <ClInclude Include="Src\Actor\ObjectiveActor.h" />
     <ClInclude Include="Src\Actor\PlayerActor.h" />
     <ClInclude Include="Src\BufferObject.h" />
     <ClInclude Include="Src\Collision.h" />

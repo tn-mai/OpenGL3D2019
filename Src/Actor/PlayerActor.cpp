@@ -11,7 +11,7 @@
 void PlayerActor::SetState(State s)
 {
   static const char* const names[] = {
-    "idle", "run", "jump", "lightAttack", "heavyAttack", "jumpAttack", "guard", "damage", "dead"
+    "idle", "run", "jump", "fall", "lightAttack", "heavyAttack", "jumpAttack", "guard", "damage", "dead"
   };
   if (state != s) {
     std::cout << "[INFO]" << __func__ << ":" << names[static_cast<int>(state)] << "->" << names[static_cast<int>(s)] << "\n";
@@ -26,6 +26,8 @@ PlayerActor::PlayerActor(const Mesh::SkeletalMeshPtr& m, const std::string& name
   const glm::vec3& rot, const glm::vec3& scale)
   : SkeletalMeshActor(m, name, hp, pos, rot, scale)
 {
+  colLocal = Collision::CreateSphere(glm::vec3(0, 0.7f, 0), 0.5f);
+  GetMesh()->Play("Idle");
   std::cout << "[INFO]" << __func__ << ": idle\n";
 }
 
@@ -58,8 +60,11 @@ bool PlayerActor::CheckRun(const GamePad& gamepad)
     rotation.y = std::atan2(-move.z, move.x) + glm::radians(90.0f);
 
     const glm::vec3 right = glm::normalize(glm::cross(move, glm::vec3(0, 1, 0)));
-    const float frontY = heightMap->Height(position + move * 0.1f) - position.y - 0.01f;
-    const float rad = glm::clamp(std::atan2(frontY, 0.1f), glm::radians(-45.0f), glm::radians(60.0f));
+    float frontY = 0;
+    if (!bordingObject) {
+      frontY = heightMap->Height(position + move * 0.1f) - position.y - 0.01f;
+    }
+    const float rad = glm::clamp(std::atan2(frontY, 0.1f), glm::radians(-60.0f), glm::radians(60.0f));
     move = glm::rotate(glm::mat4(1), rad, right) * glm::vec4(move, 1.0f);
 
     const float speed = 5.0f;
@@ -107,12 +112,11 @@ bool PlayerActor::CheckGuard(const GamePad& gamepad)
 */
 bool PlayerActor::CheckJump(const GamePad& gamepad)
 {
-  if ((isGrounded || onObject) && (gamepad.buttonDown & GamePad::B)) {
-    GetMesh()->Play("Jump");
+  if (!isInAir && (gamepad.buttonDown & GamePad::B)) {
     static const float jumpVelocity = 5.0f;
     velocity.y = jumpVelocity;
-    isGrounded = false;
-    onObject = false;
+    isInAir = true;
+    GetMesh()->Play("Jump");
     SetState(State::jump);
     return true;
   }
@@ -124,14 +128,10 @@ bool PlayerActor::CheckJump(const GamePad& gamepad)
 */
 bool PlayerActor::CheckFall(float deltaTime, float groundHeight)
 {
-  if (!onObject && (position.y - groundHeight >= 0.1f) && (velocity.y < -0.1f)) {
-    if (GetMesh()->GetAnimation() != "Fall") {
-      GetMesh()->Play("Fall");
-      isGrounded = false;
-      std::cout << "Fall";
-      SetState(State::jump);
-      return true;
-    }
+  const bool isFloating = position.y > groundHeight + 0.1f; // 地面から浮いているか.
+  if (!isInAir && isFloating && !bordingObject) {
+    isInAir = true;
+    return true;
   }
   return false;
 }
@@ -168,7 +168,8 @@ void PlayerActor::ProcessInput()
       CheckJump(gamepad);
     }
     break;
-  case State::jump:
+  case State::jump: /* FALLTHROUGH */
+  case State::fall:
     // A -> jumpAttack
     if (gamepad.buttonDown & GamePad::A) {
       mesh->Play("Attack.Jump", false);
@@ -220,26 +221,41 @@ void PlayerActor::Update(float deltaTime)
   const float groundHeight = heightMap->Height(position);
   if (position.y <= groundHeight) {
     position.y = groundHeight;
-    if (!isGrounded) {
+    bordingObject.reset();
+    if (isInAir) {
+      isInAir = false;
       velocity.y = 0;
-      isGrounded = true;
     }
-  } else if (position.y > groundHeight) {
+  }
+
+  // 物体判定.
+  if (bordingObject) {
+    Collision::Shape col = colWorld;
+    col.s.r += 0.1f;
+    glm::vec3 p;
+    if (!Collision::TestShapeShape(col, bordingObject->colWorld, &p)) {
+      DisembarkFromObject();
+    }
+  }
+
+  CheckFall(deltaTime, groundHeight);
+
+  // 重力.
+  if (isInAir) {
     velocity.y -= gravity * deltaTime;
-    isGrounded = false;
   }
 
   // 速度の減衰.
-  if (isGrounded || onObject) {
-    const glm::vec3 velocityXZ(velocity.x, 0, velocity.z);
+  if (!isInAir) {
     if (glm::dot(velocity, velocity) <= FLT_EPSILON) {
       velocity = glm::vec3(0);
     } else {
       static const float dampingFactor = 30.0f;
-      glm::vec3 old = velocity;
-      velocity -= glm::normalize(velocity) * dampingFactor * deltaTime;
-      if (glm::dot(velocity, old) <= 0.0f) {
+      const glm::vec3 newVelocity = velocity - (glm::normalize(velocity) * dampingFactor * deltaTime);
+      if (glm::dot(newVelocity, velocity) <= 0.0f) {
         velocity = glm::vec3(0);
+      } else {
+        velocity = newVelocity;
       }
     }
   }
@@ -247,24 +263,46 @@ void PlayerActor::Update(float deltaTime)
   // 状態の更新.
   switch (state) {
   case State::run:
-    if (CheckFall(deltaTime, groundHeight)) {
-    } else if (glm::length(velocity) < 1.0f * deltaTime) {
+    if (isInAir) {
+      GetMesh()->Play("Fall");
+      SetState(State::fall);
+    } else if ((velocity.x * velocity.x + velocity.z * velocity.z) < (1.0f * deltaTime * deltaTime)) {
       GetMesh()->Play("Idle");
       SetState(State::idle);
     }
     break;
   case State::idle:
-    CheckFall(deltaTime, groundHeight);
+    if (isInAir) {
+      GetMesh()->Play("Fall");
+      SetState(State::fall);
+    } else if ((velocity.x * velocity.x + velocity.z * velocity.z) >= (1.0f * deltaTime * deltaTime)) {
+      GetMesh()->Play("Run");
+      SetState(State::run);
+    }
     break;
   case State::jump:
-    if (isGrounded || onObject) {
+    if (!isInAir) {
       GetMesh()->Play("Idle");
       SetState(State::idle);
-    } else if (CheckFall(deltaTime, groundHeight)) {
+    } else if (velocity.y < 0) {
+      GetMesh()->Play("Fall");
+      SetState(State::fall);
+    }
+    break;
+  case State::fall:
+    if (!isInAir) {
+      GetMesh()->Play("Idle");
+      SetState(State::idle);
+    } else if (velocity.y >= 0) {
+      GetMesh()->Play("Jump");
+      SetState(State::jump);
     }
     break;
   case State::guard:
-    CheckFall(deltaTime, groundHeight);
+    if (isInAir) {
+      GetMesh()->Play("Fall");
+      SetState(State::fall);
+    }
     break;
   case State::lightAttack:
   case State::heavyAttack:
@@ -273,7 +311,8 @@ void PlayerActor::Update(float deltaTime)
       if (!attackCollision) {
         static const float radian = 0.5f;
         const glm::vec3 front = glm::rotate(glm::mat4(1), rotation.y, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, 1.5f, 1);
-        attackCollision = std::make_shared<StaticMeshActor>(buffer->GetMesh("Sphere"), "PlayerAttackCollision", 5, position + front + glm::vec3(0, 1, 0), glm::vec3(0), glm::vec3(radian));
+        //attackCollision = std::make_shared<StaticMeshActor>(buffer->GetMesh("Sphere"), "PlayerAttackCollision", 5, position + front + glm::vec3(0, 1, 0), glm::vec3(0), glm::vec3(radian));
+        attackCollision = std::make_shared<Actor>("PlayerAttackCollision", 5, position + front + glm::vec3(0, 1, 0), glm::vec3(0), glm::vec3(radian));
         attackCollision->colLocal = Collision::CreateSphere(glm::vec3(0), radian);
       }
     } else {
@@ -281,23 +320,27 @@ void PlayerActor::Update(float deltaTime)
     }
     if (GetMesh()->IsFinished()) {
       stateTimer = 0;
+      if (isInAir) {
+        GetMesh()->Play("Fall");
+        SetState(State::fall);
+      }
       GetMesh()->Play("Idle");
       SetState(State::idle);
       ClearAttackCollision();
-      CheckFall(deltaTime, groundHeight);
     }
     break;
   case State::jumpAttack:
-    if (isGrounded) {
+    if (!isInAir) {
       GetMesh()->Play("Idle");
       SetState(State::idle);
     } else if (GetMesh()->IsFinished()) {
       if (position.y - gravity > 0) {
         GetMesh()->Play("Jump");
+        SetState(State::jump);
       } else {
         GetMesh()->Play("Fall");
+        SetState(State::fall);
       }
-      SetState(State::jump);
     }
     break;
   case State::damage:
@@ -334,5 +377,40 @@ void PlayerActor::Draw()
   SkeletalMeshActor::Draw();
   if (attackCollision) {
     attackCollision->Draw();
+  }
+}
+
+/**
+*
+*/
+void PlayerActor::OnHit(const ActorPtr& other, const glm::vec3& p)
+{
+  // プレイヤーと障害物の衝突を解決する.
+  const glm::vec3 v = colWorld.s.center - p;
+  if (dot(v, v) > FLT_EPSILON) {
+    const glm::vec3 vn = normalize(v);
+    float r = colWorld.s.r;
+    switch (other->colWorld.type) {
+    case Collision::Shape::Type::sphere: r += other->colWorld.s.r; break;
+    case Collision::Shape::Type::capsule: r += other->colWorld.c.r; break;
+    case Collision::Shape::Type::obb: break;
+    }
+    const float distance = r - glm::length(v) + 0.01f;
+    position += vn * distance;
+    colWorld.s.center += vn * distance;
+    //const glm::vec3 normalizedVelocity = normalize(a->velocity);
+    //const glm::vec3 bn = normalize(cross(a->velocity, vn));
+    //const glm::vec3 projectedVelocity = normalize(cross(vn, bn)) * length(a->velocity) * 0.5f;
+    //a->velocity = projectedVelocity;
+    if (velocity.y < 0 && vn.y >= glm::cos(glm::radians(60.0f))) {
+      velocity.y = 0;
+      BoardToObject(other);
+    } else if (velocity.y > 0 && vn.y <= -glm::cos(glm::radians(60.0f))) {
+      velocity.y = 0;
+    }
+  } else {
+    const glm::vec3 deltaVelocity = velocity * static_cast<float>(GLFWEW::Window::Instance().DeltaTime());
+    position -= deltaVelocity;
+    colWorld.s.center -= deltaVelocity;
   }
 }

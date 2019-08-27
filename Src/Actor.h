@@ -12,6 +12,8 @@
 #include <functional>
 
 class ActorList;
+class Actor;
+using ActorPtr = std::shared_ptr<Actor>;
 
 /**
 * シーンに配置するオブジェクト.
@@ -27,6 +29,8 @@ public:
   virtual void UpdateDrawData(float);
   virtual void Draw();
 
+  virtual void OnHit(const ActorPtr&, const glm::vec3&) {}
+
 public:
   std::string name;
   glm::vec3 position = glm::vec3(0);
@@ -38,7 +42,6 @@ public:
   Collision::Shape colLocal;
   Collision::Shape colWorld;
 };
-using ActorPtr = std::shared_ptr<Actor>;
 
 /**
 * 静的メッシュ用アクター.
@@ -91,8 +94,8 @@ private:
 };
 
 using CollsionHandlerType = std::function<void(const ActorPtr&, const ActorPtr&, const glm::vec3&)>;
-bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler);
-void DetectCollision(const ActorPtr& a, const ActorList& b, CollsionHandlerType handler);
-void DetectCollision(const ActorList& a, const ActorList& b, CollsionHandlerType handler);
+bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType handler = nullptr);
+void DetectCollision(const ActorPtr& a, const ActorList& b, CollsionHandlerType handler = nullptr);
+void DetectCollision(const ActorList& a, const ActorList& b, CollsionHandlerType handler = nullptr);
 
 #endif // ACTOR_H_INCLUDED

@@ -20,6 +20,7 @@ public:
   virtual void Update(float) override;
   virtual void UpdateDrawData(float) override;
   virtual void Draw() override;
+  virtual void OnHit(const ActorPtr&, const glm::vec3&) override;
   void ProcessInput();
   void SetHeightMap(const Terrain::HeightMap* p) { heightMap = p; }
   const ActorPtr& GetAttackCollision() const { return attackCollision; }
@@ -28,11 +29,11 @@ public:
   void BoardToObject(const ActorPtr& obj) {
     bordingObject = obj;
     velocity.y = 0;
-    onObject = true;
+    isInAir = false;
   }
   void DisembarkFromObject() {
     bordingObject.reset();
-    onObject = false;
+    isInAir = true;
   }
 
 private:
@@ -46,6 +47,7 @@ private:
     idle,
     run,
     jump,
+    fall,
     lightAttack,
     heavyAttack,
     jumpAttack,
@@ -57,8 +59,7 @@ private:
 
   State state = State::idle;
   float stateTimer = 0;
-  bool isGrounded = false;
-  bool onObject = false;
+  bool isInAir = true;
   ActorPtr bordingObject;
   ActorPtr attackCollision;
   const Terrain::HeightMap* heightMap = nullptr;

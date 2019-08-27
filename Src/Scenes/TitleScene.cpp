@@ -27,6 +27,8 @@ bool TitleScene::Initialize()
   Sprite spr(Texture::Image2D::Create("Res/TitleBg.tga"));
   spr.Scale(glm::vec2(2));
   sprites.push_back(spr);
+  SceneFader::Instance().FadeOut(0);
+  SceneFader::Instance().FadeIn(1);
   return true;
 }
 
@@ -36,9 +38,17 @@ bool TitleScene::Initialize()
 void TitleScene::ProcessInput()
 {
   // ÉVÅ[ÉìêÿÇËë÷Ç¶.
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-  if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
-    SceneStack::Instance().Replace(std::make_shared<MainGameScene>());
+  SceneStack& sceneStack = SceneStack::Instance();
+  if (!SceneFader::Instance().IsFading()) {
+    if (!isNext) {
+      GLFWEW::Window& window = GLFWEW::Window::Instance();
+      if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
+        SceneFader::Instance().FadeOut(1);
+        isNext = true;
+      }
+    } else {
+      sceneStack.Replace(std::make_shared<MainGameScene>());
+    }
   }
 }
 

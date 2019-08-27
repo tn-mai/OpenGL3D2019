@@ -241,7 +241,12 @@ bool DetectCollision(const ActorPtr& a, const ActorPtr& b, CollsionHandlerType h
 {
   glm::vec3 p;
   if (Collision::TestShapeShape(a->colWorld, b->colWorld, &p)) {
-    handler(a, b, p);
+    if (handler) {
+      handler(a, b, p);
+    } else {
+      a->OnHit(b, p);
+      b->OnHit(a, p);
+    }
     return true;
   }
   return false;

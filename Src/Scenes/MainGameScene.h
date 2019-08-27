@@ -11,6 +11,7 @@
 #include "../Font.h"
 #include "../Terrain.h"
 #include "../Actor/PlayerActor.h"
+#include <random>
 
 /**
 * ƒƒCƒ“ƒQ[ƒ€‰æ–Ê.
@@ -36,12 +37,18 @@ private:
   ActorList buildings;
   ActorList enemies;
   ActorList effects;
+  ActorList objectives;
 
   Terrain::HeightMap heightMap;
 
   float actionWaitTimer = 0;
   glm::vec3 pos = glm::vec3(0, 10, 10);
   glm::vec3 dir = glm::vec3(0, 0, -1);
+
+  bool isMissionAccomplished = false;
+  float timer = 0;
+
+  std::mt19937 rand;
 };
 
 #endif // MAINGAMESCENE_H_INCLUDED

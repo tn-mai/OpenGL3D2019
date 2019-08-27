@@ -20,6 +20,7 @@ public:
   virtual void Finalize() override;
 private:
   Font::Renderer fontRenderer;
+  bool isNextScene = false;
 };
 
 #endif // GAMEOVERSCENE_H_INCLUDED
