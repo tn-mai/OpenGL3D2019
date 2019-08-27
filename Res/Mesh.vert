@@ -33,7 +33,7 @@ uniform vec4 materialColor;
 */
 void main()
 {
-  outColor = vColor;
+  outColor = vColor * modelColor;
   outTexCoord = vTexCoord;
   outNormal = matNormal * vNormal;
   outPosition = vec3(matModel * vec4(vPosition, 1.0));

@@ -113,7 +113,7 @@ void StaticMeshActor::Draw()
     const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
     const glm::mat4 matS = glm::scale(glm::mat4(1), scale);
     const glm::mat4 matModel = matT * matR_XZY * matS;
-    mesh->Draw(matModel);
+    mesh->Draw(matModel, color);
   }
 }
 
