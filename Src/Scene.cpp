@@ -2,6 +2,7 @@
 * @file Scene.cpp
 */
 #include "Scene.h"
+#include "GLFWEW.h"
 #include <iostream>
 
 /**
@@ -221,6 +222,8 @@ void SceneStack::Update(float deltaTime)
   for (auto& e : stack) {
     e->Update(deltaTime);
   }
+
+  SceneFader::Instance().Update(deltaTime);
 }
 
 /**
@@ -233,4 +236,118 @@ void SceneStack::Render()
       e->Render();
     }
   }
+  SceneFader::Instance().Render();
+}
+
+/**
+* フェードイン・フェードアウト制御クラスのシングルトンインスタンスを取得する.
+*
+* @return フェードイン・フェードアウト制御クラスのシングルトンインスタンス.
+*/
+SceneFader& SceneFader::Instance()
+{
+  static SceneFader instance;
+  return instance;
+}
+
+/**
+* コンストラクタ.
+*/
+SceneFader::SceneFader()
+{
+  uint32_t imageData[4 * 4];
+  for (auto& e : imageData) {
+    e = 0xffffffff;
+  }
+  spriteRenderer.Init(1, "Res/Sprite.vert", "Res/Sprite.frag");
+  spr = Sprite(Texture::Image2D::Create("FadeFilter", 4, 4, imageData, GL_BGRA, GL_UNSIGNED_BYTE));
+}
+
+/**
+* フェードイン・フェードアウトの状態を更新する.
+*
+* @param deltaTime 前回の更新からの経過時間(秒).
+*/
+void SceneFader::Update(float deltaTime)
+{
+  if (mode != Mode::none) {
+    // 画面全体を覆うようにスプライトのサイズを調整.
+    glm::vec2 scale;
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
+    scale.x = static_cast<float>(window.Width()) / static_cast<float>(spr.Texture()->Width());
+    scale.y = static_cast<float>(window.Height()) / static_cast<float>(spr.Texture()->Height());
+    spr.Scale(scale);
+
+    // 経過時間に応じて不透明度を更新.
+    glm::vec4 color = spr.Color();
+    if (mode == Mode::fadeIn) {
+      color.a = timer / totalTime;
+    } else if (mode == Mode::fadeOut) {
+      color.a = 1.0f - timer / totalTime;
+    }
+    spr.Color(color);
+
+    // スプライトをスプライト描画クラスに追加.
+    spriteRenderer.BeginUpdate();
+    spriteRenderer.AddVertices(spr);
+    spriteRenderer.EndUpdate();
+
+    // 経過時間タイマー更新.
+    timer -= deltaTime;
+    if (timer <= 0) {
+      timer = 0;
+      if (mode == Mode::fadeIn) {
+        mode = Mode::none;
+      }
+    }
+  }
+}
+
+/**
+* フェードイン・フェードアウトを描画する.
+*/
+void SceneFader::Render() const
+{
+  if (mode != Mode::none) {
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
+    spriteRenderer.Draw(glm::vec2(window.Width(), window.Height()));
+  }
+}
+
+/**
+* フェードアウトを開始する.
+*
+* @param time  フェードアウトにかかる時間(秒).
+* @param color フェードアウト先の色.
+*/
+void SceneFader::FadeOut(float time, const glm::vec3& color)
+{
+  mode = Mode::fadeOut;
+  totalTime = timer = time;
+  spr.Color(glm::vec4(color, 1));
+}
+
+/**
+* フェードインを開始する.
+*
+* @param time フェードインにかかる時間(秒).
+*/
+void SceneFader::FadeIn(float time)
+{
+  mode = Mode::fadeIn;
+  totalTime = timer = time;
+  glm::vec4 c = spr.Color();
+  c.a = 0;
+  spr.Color(c);
+}
+
+/**
+* フェードイン(またはフェードアウト)中か調べる.
+*
+* @retval true  フェードイン(またはフェードアウト)中.
+* @retval false フェードイン(またはフェードアウト)は終了している.
+*/
+bool SceneFader::IsFading() const
+{
+  return mode != Mode::none && timer > 0;
 }
