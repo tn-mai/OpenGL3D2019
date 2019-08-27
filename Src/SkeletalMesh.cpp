@@ -23,8 +23,7 @@ namespace /* unnamed */ {
 struct alignas(256) UniformDataMeshMatrix
 {
   glm::aligned_vec4 color;
-  glm::aligned_mat3x4 matModel[4]; // it must transpose.
-  glm::aligned_mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
+  glm::aligned_mat3x4 matModel[8]; // it must transpose.
   glm::aligned_mat3x4 matBones[256]; // it must transpose.
 };
 
@@ -166,7 +165,7 @@ struct AnimatedNodeTree {
     glm::aligned_mat4 matLocal = glm::aligned_mat4(1);
     glm::aligned_mat4 matGlobal = glm::aligned_mat4(1);
     bool isCalculated = false;
-    bool hasTransformation = false;
+    int hasTransformation = 0;
   };
   std::vector<Transformation> nodeTransformations;
 };
@@ -228,10 +227,20 @@ void CalcGlobalTransform(const std::vector<Node>& nodes, const Node& node, Anima
     transformation.matLocal = glm::aligned_mat4(1);
   }
   if (transformation.hasTransformation) {
-    const glm::aligned_mat4 T = glm::translate(glm::aligned_mat4(1), transformation.translation);
-    const glm::aligned_mat4 R = glm::mat4_cast(transformation.rotation);
-    const glm::aligned_mat4 S = glm::scale(glm::aligned_mat4(1), transformation.scale);
-    transformation.matLocal *= T * R * S;
+    glm::aligned_mat4 m(1);
+    if (transformation.hasTransformation & 1) {
+      const glm::aligned_mat4 T = glm::translate(glm::aligned_mat4(1), transformation.translation);
+      m = T;
+    }
+    if (transformation.hasTransformation & 2) {
+      const glm::aligned_mat4 R = glm::mat4_cast(transformation.rotation);
+      m = m * R;
+    }
+    if (transformation.hasTransformation & 4) {
+      const glm::aligned_mat4 S = glm::scale(glm::aligned_mat4(1), transformation.scale);
+      m = m * S;
+    }
+    transformation.matLocal = transformation.matLocal * m;
   } else {
     transformation.matLocal *= node.matLocal;
   }
@@ -248,15 +257,15 @@ AnimatedNodeTree MakeAnimatedNodeTree(const ExtendedFile& file, const Animation&
   tmp.nodeTransformations.resize(file.nodes.size());
   for (const auto& e : animation.scaleList) {
     tmp.nodeTransformations[e.targetNodeId].scale = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation |= 4;
   }
   for (const auto& e : animation.rotationList) {
     tmp.nodeTransformations[e.targetNodeId].rotation = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation |= 2;
   }
   for (const auto& e : animation.translationList) {
     tmp.nodeTransformations[e.targetNodeId].translation = Interporation(e, keyFrame);
-    tmp.nodeTransformations[e.targetNodeId].hasTransformation = true;
+    tmp.nodeTransformations[e.targetNodeId].hasTransformation |= 1;
   }
   for (auto& e : file.nodes) {
     CalcGlobalTransform(file.nodes, e, tmp);
@@ -416,12 +425,11 @@ void SkeletalMesh::Update(float deltaTime, const glm::aligned_mat4& matModel, co
   }
   if (mt.matRoot.empty()) {
     uboData.matModel[0] = glm::transpose(matModel);
-    uboData.matNormal[0] = DecomposeRotation(matModel);
   } else {
-    for (size_t i = 0; i < mt.matRoot.size(); ++i) {
+    const size_t size = std::min(mt.matRoot.size(), sizeof(uboData.matModel) / sizeof(uboData.matModel[0]));
+    for (size_t i = 0; i < size; ++i) {
       const glm::aligned_mat4 m = matModel * mt.matRoot[i];
       uboData.matModel[i] = glm::transpose(m);
-      uboData.matNormal[i] = DecomposeRotation(m);
     }
   }
   uboSize = sizeof(glm::aligned_vec4) + sizeof(glm::aligned_mat3x4) * 8 + sizeof(glm::aligned_mat3x4) * mt.transformations.size();
@@ -478,6 +486,10 @@ void SkeletalMesh::Draw() const
           m.texture->Bind(0);
           prevTexId = texId;
         }
+      }
+      const GLint locMaterialColor = glGetUniformLocation(m.progSkeletalMesh->Id(), "materialColor");
+      if (locMaterialColor >= 0) {
+        glUniform4fv(locMaterialColor, 1, &m.baseColor.x);
       }
       glDrawElementsBaseVertex(prim.mode, prim.count, prim.type, prim.indices, prim.baseVertex);
     }
@@ -1058,7 +1070,9 @@ bool Buffer::LoadSkeletalMesh(const char* path)
         const json11::Json& sampler = samplers[samplerId];
         const json11::Json& target = e["target"];
         const int targetNodeId = target["node"].int_value();
-
+        if (targetNodeId < 0) {
+          continue;
+        }
         const int inputAccessorId = sampler["input"].int_value();
         const int inputCount = accessors[inputAccessorId]["count"].int_value();
         const void* pInput;

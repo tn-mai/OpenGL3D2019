@@ -22,8 +22,7 @@ uniform mat4x4 matVP;
 layout(std140) uniform MeshMatrixUniformData
 {
   vec4 color;
-  mat3x4 matModel[4]; // it must transpose.
-  mat3x4 matNormal[4]; // w isn't ussing. no need to transpose.
+  mat3x4 matModel[8]; // it must transpose.
   mat3x4 matBones[256]; // it must transpose.
 } vd;
 
@@ -32,11 +31,11 @@ uniform vec4 materialColor;
 uniform int meshIndex;
 
 /**
-* スプライト用頂点シェーダー.
+* Vertex shader for Skeletal Mesh.
 */
 void main()
 {
-  outColor = vColor;
+  outColor = vColor * vd.color;
   outTexCoord = vTexCoord;
   mat3x4 matSkinTmp =
     vd.matBones[int(vJoints.x)] * vWeights.x +

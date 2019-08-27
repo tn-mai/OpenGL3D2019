@@ -37,7 +37,7 @@ void SkeletalMeshActor::UpdateDrawData(float deltaTime)
     const glm::mat4 matR_XZY = glm::rotate(matR_ZY, rotation.x, glm::vec3(1, 0, 0));
     const glm::mat4 matS = glm::scale(glm::mat4(1), scale);
     const glm::mat4 matModel = matT * matR_XZY * matS;
-    mesh->Update(deltaTime, matModel, glm::vec4(1));
+    mesh->Update(deltaTime, matModel, color);
   }
 }
 
