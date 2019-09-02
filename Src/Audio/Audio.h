@@ -56,11 +56,10 @@ typedef std::shared_ptr<Sound> SoundPtr;
 *
 * 初期化と終了:
 * -# アプリケーションの初期化処理でEngine::Initialize()を呼び出す.
-* -# アプリケーションの終了処理でEngine::Destroy()を呼び出す.
+* -# アプリケーションの終了処理でEngine::Finalize()を呼び出す.
 *
 * 音声の再生:
-* -# 音声ファイル名を引数にしてPrepare(ぷりぺあ, SEの場合)、またはPrepareStream(ぷりぺあ・すとりーむ, BGMの場合)関数を呼び出すと、
-*    戻り値として「音声制御インターフェイス」が返されるので、これを変数に保存する.
+* -# 音声ファイル名を引数にしてPrepare(ぷりぺあ)関数を呼び出すと、戻り値として「音声制御インターフェイス」が返されるので、これを変数に保存する.
 * -# 音声制御インターフェイスに対してPlay関数を呼び出すと音声が再生される. Playを呼び出すたびに同じ音声が再生される.
 * -# Playを呼び出す必要がなくなったら音声制御インターフェイスを破棄する.
 * -# 使いまわしをしない音声の場合「engine.Prepare("OneTimeSound.wav")->Play()」のように書くことができる.
@@ -88,8 +87,6 @@ private:
   Engine(const Engine&) = delete;
   Engine& operator=(const Engine&) = delete;
 };
-
-using EngineRef = Engine&;
 
 } // namespace Audio
 
