@@ -6,6 +6,7 @@
 #include "../Scene.h"
 #include "../Sprite.h"
 #include "../Font.h"
+#include "../Audio/Audio.h"
 #include <vector>
 
 /**
@@ -24,6 +25,7 @@ private:
   std::vector<Sprite> sprites;
   SpriteRenderer spriteRenderer;
   Font::Renderer fontRenderer;
+  Audio::SoundPtr bgm;
   bool isNext = false;
 };
 

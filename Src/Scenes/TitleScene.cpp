@@ -27,6 +27,10 @@ bool TitleScene::Initialize()
   Sprite spr(Texture::Image2D::Create("Res/TitleBg.tga"));
   spr.Scale(glm::vec2(2));
   sprites.push_back(spr);
+
+  bgm = Audio::Engine::Instance().Prepare("Res/Audio/senbazuru-by-kevin-macleod.mp3");
+  bgm->Play(Audio::Flag_Loop);
+
   SceneFader::Instance().FadeOut(0);
   SceneFader::Instance().FadeIn(1);
   return true;
@@ -43,10 +47,12 @@ void TitleScene::ProcessInput()
     if (!isNext) {
       GLFWEW::Window& window = GLFWEW::Window::Instance();
       if (window.GetGamePad().buttonDown & (GamePad::A | GamePad::START)) {
+        Audio::Engine::Instance().Prepare("Res/Audio/Start.wav")->Play();
         SceneFader::Instance().FadeOut(1);
         isNext = true;
       }
     } else {
+      bgm->Stop();
       sceneStack.Replace(std::make_shared<MainGameScene>());
     }
   }
@@ -75,6 +81,17 @@ void TitleScene::Update(float deltaTime)
   fontRenderer.Scale(glm::vec2(4));
   fontRenderer.AddString(glm::vec2(-300, 0), L"”ä‹u“ò—Vs˜^");
   fontRenderer.EndUpdate();
+
+  if (isNext) {
+    float v = bgm->GetVolume();
+    if (v > 0) {
+      v -= deltaTime;
+      if (v <= 0) {
+        v = 0;
+      }
+      bgm->SetVolume(v);
+    }
+  }
 }
 
 /**

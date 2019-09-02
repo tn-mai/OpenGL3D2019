@@ -18,6 +18,9 @@
     <Filter Include="Src\Actor">
       <UniqueIdentifier>{403ccf32-119b-45b2-8415-58a33d077e5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Src\Audio">
+      <UniqueIdentifier>{af853c93-cf67-4c8b-87b0-4e4a08fb4247}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Main.cpp">
@@ -82,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="Src\SkeletalMeshActor.cpp">
       <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Audio\Audio.cpp">
+      <Filter>Src\Audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -150,6 +156,9 @@
     </ClInclude>
     <ClInclude Include="Src\Actor\ObjectiveActor.h">
       <Filter>Src\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Audio\Audio.h">
+      <Filter>Src\Audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

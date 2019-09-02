@@ -5,6 +5,7 @@
 #include "GLFWEW.h"
 #include "Scenes/TitleScene.h"
 #include "SkeletalMesh.h"
+#include "Audio/Audio.h"
 #include <iostream>
 
 /**
@@ -17,11 +18,16 @@ int main()
     return 1;
   }
 
-  Mesh::GlobalSkeletalMeshState::Initialize();
+  Audio::Engine& audioEngine = Audio::Engine::Instance();
+  if (!audioEngine.Initialize()) {
+    return 1;
+  }
 
+  if (!Mesh::GlobalSkeletalMeshState::Initialize()) {
+    return 1;
+  }
   SceneStack& sceneStack = SceneStack::Instance();
   sceneStack.Push(std::make_shared<TitleScene>());
-  sceneStack.Current().Initialize();
 
   while (!window.ShouldClose()) {
     window.Update();
@@ -37,6 +43,8 @@ int main()
 
     Mesh::GlobalSkeletalMeshState::UploadUniformData();
 
+    audioEngine.Update();
+
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_CULL_FACE);
@@ -47,5 +55,6 @@ int main()
     window.SwapBuffers();
   }
 
+  audioEngine.Finalize();
   Mesh::GlobalSkeletalMeshState::Finalize();
 }
