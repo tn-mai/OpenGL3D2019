@@ -83,17 +83,18 @@ bool HeightMap::CreateMesh(Mesh::Buffer& meshBuffer, const char* meshName, const
   indices.reserve(size.x * size.y);
   for (int z = 0; z < size.y - 1; ++z) {
     for (int x = 0; x < size.x - 1; ++x) {
-       const GLuint a = (z + 1) * size.x + x;
-       const GLuint b = (z + 1) * size.x + (x + 1);
-       const GLuint c = z       * size.x + (x + 1);
-       const GLuint d = z       * size.x + x;
-       indices.push_back(a);
-       indices.push_back(b);
-       indices.push_back(c);
+      const GLuint a = (z + 1) * size.x + x;
+      const GLuint b = (z + 1) * size.x + (x + 1);
+      const GLuint c = z       * size.x + (x + 1);
+      const GLuint d = z       * size.x + x;
+      indices.push_back(a);
+      indices.push_back(b);
+      indices.push_back(c);
  
-       indices.push_back(c);
-       indices.push_back(d);
-       indices.push_back(a);    }
+      indices.push_back(c);
+      indices.push_back(d);
+      indices.push_back(a);
+    }
   }
   const size_t iOffset = meshBuffer.AddIndexData(indices.data(), indices.size() * sizeof(GLuint));
 
