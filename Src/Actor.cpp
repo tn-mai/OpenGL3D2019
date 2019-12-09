@@ -172,6 +172,14 @@ void ActorList::Update(float deltaTime)
       e->Update(deltaTime);
     }
   }
+  for (auto i = actors.begin(); i != actors.end(); ) {
+    auto e = *i;
+    if (!e || e->health <= 0) {
+      i = actors.erase(i);
+    } else {
+      ++i;
+    }
+  }
 }
 
 /**
@@ -223,8 +231,14 @@ ActorPtr ActorList::Find(const std::string& name) const
 */
 void ActorList::RemoveDead()
 {
-  actors.erase(std::remove_if(actors.begin(), actors.end(),
-    [](const ActorPtr& actor) { return actor->health <= 0; }), actors.end());
+  for (auto i = actors.begin(); i != actors.end(); ) {
+    auto e = *i;
+    if (!e || e->health <= 0) {
+      i = actors.erase(i);
+    } else {
+      ++i;
+    }
+  }
 }
 
 /**
