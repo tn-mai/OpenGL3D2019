@@ -87,10 +87,13 @@ struct ScopedHandle
   HANDLE handle;
 };
 
-bool Read(HANDLE hFile, void* buf, DWORD size)
+bool Read(HANDLE hFile, void* buf, size_t size)
 {
+  if (size > std::numeric_limits<DWORD>::max()) {
+    return false;
+  }
   DWORD readSize;
-  if (!ReadFile(hFile, buf, size, &readSize, nullptr) || readSize != size) {
+  if (!ReadFile(hFile, buf, static_cast<DWORD>(size), &readSize, nullptr) || readSize != size) {
     return false;
   }
   return true;
@@ -128,7 +131,7 @@ bool LoadWaveFile(HANDLE hFile, WF& wf, std::vector<UINT32>& seekTable, std::vec
   bool hasDpds = false;
   size_t offset = 12;
   do {
-    if (SetFilePointer(hFile, offset, nullptr, FILE_BEGIN) != offset) {
+    if (SetFilePointer(hFile, static_cast<LONG>(offset), nullptr, FILE_BEGIN) != offset) {
       return false;
     }
 
@@ -138,7 +141,7 @@ bool LoadWaveFile(HANDLE hFile, WF& wf, std::vector<UINT32>& seekTable, std::vec
     }
 
     if (chunk.tag == FOURCC_FORMAT_TAG) {
-      if (!Read(hFile, &wf.u, std::min(chunk.size, sizeof(WF::U)))) {
+      if (!Read(hFile, &wf.u, std::min<size_t>(chunk.size, sizeof(WF::U)))) {
         break;
       }
       switch (GetWaveFormatTag(wf.u.ext)) {
@@ -178,14 +181,14 @@ bool LoadWaveFile(HANDLE hFile, WF& wf, std::vector<UINT32>& seekTable, std::vec
 
   if (wf.seekSize) {
     seekTable.resize(wf.seekSize);
-    SetFilePointer(hFile, wf.seekOffset, nullptr, FILE_BEGIN);
+    SetFilePointer(hFile, static_cast<LONG>(wf.seekOffset), nullptr, FILE_BEGIN);
     if (!Read(hFile, seekTable.data(), wf.seekSize * 4)) {
       return false;
     }
   }
   if (source) {
     source->resize(wf.dataSize);
-    SetFilePointer(hFile, wf.dataOffset, nullptr, FILE_BEGIN);
+    SetFilePointer(hFile, static_cast<LONG>(wf.dataOffset), nullptr, FILE_BEGIN);
     if (!Read(hFile, source->data(), wf.dataSize)) {
       return false;
     }
@@ -242,7 +245,7 @@ public:
       Stop();
       XAUDIO2_BUFFER buffer = {};
       buffer.Flags = XAUDIO2_END_OF_STREAM;
-      buffer.AudioBytes = source.size();
+      buffer.AudioBytes = static_cast<UINT32>(source.size());
       buffer.pAudioData = source.data();
       buffer.LoopCount = flags & Flag_Loop ? XAUDIO2_LOOP_INFINITE : XAUDIO2_NO_LOOP_REGION;
       if (seekTable.empty()) {
@@ -250,7 +253,7 @@ public:
           return false;
         }
       } else {
-        const XAUDIO2_BUFFER_WMA seekInfo = { seekTable.data(), seekTable.size() };
+        const XAUDIO2_BUFFER_WMA seekInfo = { seekTable.data(), static_cast<UINT32>(seekTable.size()) };
         if (FAILED(sourceVoice->SubmitSourceBuffer(&buffer, &seekInfo))) {
           return false;
         }
@@ -427,7 +430,7 @@ public:
     if (!sourceVoice) {
       return false;
     }
-    const DWORD cbValid = std::min(packedAlignedBufferSize, dataSize - currentPos);
+    const size_t cbValid = std::min(packedAlignedBufferSize, dataSize - currentPos);
     if (cbValid == 0) {
       return false;
     }
@@ -436,21 +439,23 @@ public:
     if (state.BuffersQueued >= MAX_BUFFER_COUNT - 1) {
       return true;
     }
-
-    SetFilePointer(handle, dataOffset + currentPos, nullptr, FILE_BEGIN);
+    if (dataOffset + currentPos > static_cast<size_t>(std::numeric_limits<LONG>::max())) {
+      return false;
+    }
+    SetFilePointer(handle, static_cast<LONG>(dataOffset + currentPos), nullptr, FILE_BEGIN);
     if (!Read(handle, buf[curBuf].data, cbValid)) {
       return false;
     }
 
     XAUDIO2_BUFFER buffer = {};
     buffer.pAudioData = buf[curBuf].data;
-    buffer.AudioBytes = cbValid;
+    buffer.AudioBytes = static_cast<UINT32>(cbValid);
     buffer.Flags = cbValid == packedAlignedBufferSize ? 0 : XAUDIO2_END_OF_STREAM;
     if (seekTable.empty()) {
       sourceVoice->SubmitSourceBuffer(&buffer, nullptr);
     } else {
       XAUDIO2_BUFFER_WMA bufWma = {};
-      bufWma.PacketCount = cbValid / packetSize;
+      bufWma.PacketCount = static_cast<UINT32>(cbValid / packetSize);
       if (bufWma.PacketCount >= 0x100) {
         std::cerr << "WARNING: PacketCountがバッファサイズを越えた." << std::endl;
       }
@@ -608,6 +613,13 @@ public:
       isEndOfStream = false;
       curBuf = 0;
       currentPos = 0;
+
+      // 読み込み位置をリセット.
+      PROPVARIANT value;
+      value.vt = VT_I8;
+      value.hVal.QuadPart = 0;
+      sourceReader->SetCurrentPosition(GUID_NULL, value);
+
       return SUCCEEDED(sourceVoice->FlushSourceBuffers());
     }
     return false;
